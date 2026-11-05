@@ -45,6 +45,8 @@ class DepartmentModule:
                       case_id=ctx.case_id, thread_id=ctx.thread_id)
             await bus.emit(ctx.thread_id, ctx.case_id, "submodule", sub, last.status,
                            {"summary_en": last.summary_en, "summary_bm": last.summary_bm})
+            if last.status == "needs_approval":
+                ctx.scratch["pending_submodule"] = sub
             if last.status in {"handoff", "needs_approval", "error"}:
                 break
         return last

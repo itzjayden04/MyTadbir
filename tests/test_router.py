@@ -60,12 +60,37 @@ class _FloodHandoff(Module):
 def test_api_runs_cases_sequentially_with_handoff(monkeypatch):
     monkeypatch.setitem(registry._modules, "incident_dispatcher", _FloodHandoff)
     with TestClient(app) as c:
-        r = c.post("/api/requests", json={"text": "Longkang tersumbat depan sekolah"}).json()
+        tok = c.post("/api/auth/login", json={"username": "aisyah", "password": "Demo@2026"}).json()["token"]
+        c.headers["Authorization"] = f"Bearer {tok}"
+        r = c.post("/api/requests", data={"text": "Longkang tersumbat depan sekolah"}).json()
         assert r["status"] == "routed"
         tid, cid = r["thread_id"], r["intents"][0]["case_id"]
         cases = c.get(f"/api/threads/{tid}").json()
         assert cases[0]["status"] == "done"
-        assert cases[0]["context"]["handoff_chain"] == ["local_gov", "agri_env"]
+        assert cases[0]["chain"] == ["local_gov", "agri_env"]
         actions = [e["action"] for e in c.get(f"/api/cases/{cid}/timeline").json()]
         assert actions.index("handoff_queued") < actions.index("case_closed")
         assert actions.count("dispatched") == 2  # one department after the other, same Case ID
+
+
+def test_jpj_scenario_pauses_for_citizen_then_runs_next_case_in_order():
+    with TestClient(app) as c:
+        tok = c.post("/api/auth/login", json={"username": "aisyah", "password": "Demo@2026"}).json()["token"]
+        c.headers["Authorization"] = f"Bearer {tok}"
+        r = c.post("/api/requests", data={"text": "Saya nak renew lesen memandu dan bayar saman"}).json()
+        tid = r["thread_id"]
+        first, second = c.get(f"/api/threads/{tid}").json()
+        assert first["status"] == "awaiting_approval" and second["status"] == "queued"  # renewal waits its turn
+        appr = [a for a in c.get("/api/approvals").json() if a["case_id"] == first["case_id"]][0]
+        assert appr["actor"] == "citizen"
+        c.post(f"/api/approvals/{appr['id']}/decide", json={"approved": True})
+        import time
+        for _ in range(50):
+            first, second = c.get(f"/api/threads/{tid}").json()
+            if second["status"] == "done":
+                break
+            time.sleep(0.1)
+        assert first["status"] == "done" and second["status"] == "done", (first, second)
+        paid = [p for p in c.get("/api/payments").json() if p["case_id"] in {first["case_id"], second["case_id"]}]
+        assert sorted(p["status"] for p in paid) == ["paid", "paid"]
+        assert any(d["kind"] == "receipt" for d in c.get("/api/documents").json())

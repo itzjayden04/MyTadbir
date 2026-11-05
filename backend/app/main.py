@@ -346,6 +346,21 @@ def demo_reset(u: User = Depends(current_user)):
     return {"ok": True}
 
 
+class Pace(BaseModel):
+    seconds: float
+
+
+@app.post("/api/demo/pace")
+def demo_pace(body: Pace):
+    bus.pace = max(0.0, min(body.seconds, 3.0))
+    return {"pace": bus.pace}
+
+
+@app.get("/api/demo/pace")
+def get_pace():
+    return {"pace": bus.pace}
+
+
 # ---------------------------------------------------------------- frontend
 if FRONTEND.exists():
     app.mount("/", StaticFiles(directory=FRONTEND, html=True), name="frontend")

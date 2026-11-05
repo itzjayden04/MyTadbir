@@ -33,7 +33,8 @@ class ReasoningAndNextSteps(Module):
             out, meta = llm.chat_json(
                 "summarise",
                 "Summarise what the government agents did for this case in 2 short sentences for the citizen, then "
-                "give up to 3 practical next steps for the citizen. Use only the facts given. English and BM.",
+                "give up to 3 practical next steps for the citizen. Use only the facts given. final_outcome is authoritative: "
+                "never suggest a step that is already done. English and BM.",
                 f"Case {ctx.case_id}, departments in order: {ctx.handoff_chain}. Facts: {facts}", Wrap, max_tokens=1200)
             return ModuleResult(status="ok", data={**out.model_dump(), "llm": meta.model_dump()})
         return ModuleResult(status="ok", data={

@@ -34,7 +34,11 @@ class TraceBus:
         }
         for q in self._subs.get(thread_id, []):
             await q.put(payload)
+        if self.pace and self._subs.get(thread_id):
+            await asyncio.sleep(self.pace)  # presenter pacing so viewers can follow each step
         return payload
+
+    pace: float = 0.0
 
 
 bus = TraceBus()

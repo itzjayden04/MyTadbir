@@ -106,6 +106,7 @@ async def _drive(ctx: CaseContext, dept_key: str, hop: int, secondary: str | Non
         dept_key, hop, outcome = nxt, hop + 1, None
         ctx.scratch["submodule_hint"] = None  # the new owner plans for itself
 
+    ctx.scratch["final_outcome"] = outcome.summary_en  # authoritative for the summary module
     for name in registry.names(kind="always_on"):
         try:
             r = await registry.get(name).run(ctx)

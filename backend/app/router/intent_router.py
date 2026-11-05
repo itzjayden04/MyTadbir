@@ -80,6 +80,7 @@ async def route(text: str, *, image_paths: list[str] | None = None, identity: di
 
     await bus.emit(thread_id, None, "router", "intent_router", "classified", {
         "classifier": clf.name, "language": out.language,
+        "llm": getattr(clf, "last_meta", None) and clf.last_meta.model_dump(),
         "intents": [g.model_dump() for g in out.intents],
     })
 

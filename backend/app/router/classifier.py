@@ -1,15 +1,11 @@
-"""Intent classifiers. The router uses Claude when an API key is set, else the keyword lexicon.
+"""Intent classifiers. The router uses DeepSeek when a key is configured, else the keyword lexicon.
 
 Neither classifier executes anything: they only return department / sub-module guesses.
 """
 from __future__ import annotations
 
-import base64
 import logging
-import mimetypes
-import os
 import re
-from pathlib import Path
 
 from ..departments.catalog import BY_KEY, DEPARTMENTS
 from .lexicon import BM_MARKERS, LEXICON, SPLITTERS
@@ -17,7 +13,6 @@ from .schemas import ClassifierOutput, IntentGuess
 
 log = logging.getLogger(__name__)
 
-MODEL = os.environ.get("MYTADBIR_MODEL", "claude-opus-5-5")
 SUB_TO_DEPT = {s.key: d.key for d in DEPARTMENTS for s in d.subs}
 
 
@@ -92,7 +87,7 @@ class KeywordClassifier:
         return ClassifierOutput(language=lang, intents=guesses, clarifying_question=question)
 
 
-# ---------------------------------------------------------------- Claude classifier
+# ---------------------------------------------------------------- LLM classifier
 def _catalog_text() -> str:
     lines = []
     for d in DEPARTMENTS:
@@ -122,40 +117,20 @@ Rules:
 """
 
 
-class ClaudeClassifier:
-    name = "claude"
+class LLMClassifier:
+    """DeepSeek classifier (task "route": deepseek-flash, low effort). Photos are sent with the text."""
+    name = "deepseek-flash"
 
     def __init__(self) -> None:
-        import anthropic  # imported lazily so the app runs without the SDK configured
-
-        self.client = anthropic.Anthropic(timeout=30, max_retries=1)
-
-    @staticmethod
-    def _image_block(path: str) -> dict | None:
-        p = Path(path)
-        mt = mimetypes.guess_type(p.name)[0]
-        if not p.exists() or mt not in {"image/jpeg", "image/png", "image/webp", "image/gif"}:
-            return None
-        return {"type": "image", "source": {"type": "base64", "media_type": mt,
-                                             "data": base64.b64encode(p.read_bytes()).decode()}}
+        self.last_meta = None
 
     def classify(self, text: str, image_paths: list[str] | None = None) -> ClassifierOutput:
-        content: list[dict] = [b for b in (self._image_block(p) for p in image_paths or []) if b]
-        content.append({"type": "text", "text": text or "(no text, photo only)"})
-        resp = self.client.beta.messages.parse(
-            model=MODEL,
-            max_tokens=4000,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": content}],
-            output_format=ClassifierOutput,
-            output_config={"effort": "low"},
-            # Server-side fallback: if a safety classifier declines, the API reroutes to a fallback model.
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-        )
-        if resp.stop_reason == "refusal":
-            raise RuntimeError("model declined to classify")
-        out: ClassifierOutput = resp.parsed_output
+        from .. import llm
+
+        parts = [p for p in (llm.image_part(x) for x in image_paths or []) if p]
+        user = [*parts, {"type": "text", "text": text or "(no text, photo only)"}] if parts else (text or "")
+        out, meta = llm.chat_json("route", SYSTEM_PROMPT, user, ClassifierOutput, max_tokens=3000)
+        self.last_meta = meta
         # Never trust keys blindly: drop anything not in the catalog.
         valid = []
         for g in out.intents:
@@ -166,13 +141,12 @@ class ClaudeClassifier:
             else:
                 log.warning("dropping invalid route %s/%s", g.department, g.submodule)
         out.intents = valid
+        if out.language not in {"bm", "en"}:
+            out.language = detect_language(text)
         return out
 
 
 def get_classifier():
-    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
-        try:
-            return ClaudeClassifier()
-        except Exception:  # noqa: BLE001
-            log.exception("Claude classifier unavailable, using keyword classifier")
-    return KeywordClassifier()
+    from .. import llm
+
+    return LLMClassifier() if llm.available() else KeywordClassifier()

@@ -6,7 +6,10 @@
 | inspect_image     | deepseek-flash   | low    | only flash accepts images; severity + scene notes     |
 | summarise         | deepseek-flash   | low    | reasoning summary and next-step suggestions           |
 | notify            | deepseek-flash   | low    | citizen-facing message in BM/EN                       |
-| legal_reasoning   | deepseek-v4-pro  | high   | apply cited by-law clauses to the facts of the case   |
+| legal_reasoning   | deepseek-v4-pro  | low    | apply cited by-law clauses to the facts of the case   |
+
+Measured on the drain case: v4-pro/high 88 s and 5.3k tokens; v4-pro/low 44 s and 2.5k tokens;
+flash/low 21 s. Override with MYTADBIR_LEGAL_MODEL=deepseek-flash for a faster live demo.
 
 Every call reports the model, effort and token usage to the live trace, so the demo shows exactly
 which model ran each step.
@@ -32,7 +35,7 @@ TASKS: dict[str, tuple[str, str]] = {
     "inspect_image": ("deepseek-flash", "low"),
     "summarise": ("deepseek-flash", "low"),
     "notify": ("deepseek-flash", "low"),
-    "legal_reasoning": ("deepseek-v4-pro", "high"),
+    "legal_reasoning": (os.environ.get("MYTADBIR_LEGAL_MODEL", "deepseek-v4-pro"), "low"),
 }
 
 

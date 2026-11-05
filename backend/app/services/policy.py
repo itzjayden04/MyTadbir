@@ -5,6 +5,8 @@ the chunk IDs it was given; any other citation is dropped and the point is marke
 """
 from __future__ import annotations
 
+import asyncio
+
 from pydantic import BaseModel, Field
 
 from .. import llm
@@ -33,7 +35,7 @@ def _cite(h: dict) -> dict:
 
 
 async def retrieve(ctx: CaseContext, query: str, *, dept: str | None, k: int = 5, kinds: set[str] | None = None) -> list[dict]:
-    hits = rag.search(query, dept=dept, k=k, kinds=kinds)
+    hits = await asyncio.to_thread(rag.search, query, dept=dept, k=k, kinds=kinds)
     cites = [_cite(h) for h in hits]
     audit.log("policy_rag_agent", "retrieved", {"query": query, "dept": dept, "citations": cites},
               case_id=ctx.case_id, thread_id=ctx.thread_id)
@@ -51,7 +53,7 @@ async def reason(ctx: CaseContext, question: str, facts: dict, hits: list[dict])
               "excerpts, still state it but set is_assumption=true and leave chunk_ids empty. Never invent a "
               "section number, fee or deadline that is not in an excerpt. Write each point in English and BM.")
     user = f"Question: {question}\n\nFacts: {facts}\n\nExcerpts:\n{excerpts}"
-    out, meta = llm.chat_json("legal_reasoning", system, user, PolicyReasoning, max_tokens=6000)
+    out, meta = await asyncio.to_thread(llm.chat_json, "legal_reasoning", system, user, PolicyReasoning, max_tokens=6000)
     valid_ids = {h["chunk_id"] for h in hits}
     for f in out.findings:
         bad = [c for c in f.chunk_ids if c not in valid_ids]

@@ -9,6 +9,7 @@ The five features from the brief:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -65,7 +66,7 @@ async def route(text: str, *, image_paths: list[str] | None = None, identity: di
     image_paths = image_paths or []
     clf = get_classifier()
     try:
-        out: ClassifierOutput = clf.classify(text, image_paths)
+        out: ClassifierOutput = await asyncio.to_thread(clf.classify, text, image_paths)
     except Exception as exc:  # noqa: BLE001
         log.warning("classifier %s failed (%s); falling back to keywords", clf.name, exc)
         clf = KeywordClassifier()

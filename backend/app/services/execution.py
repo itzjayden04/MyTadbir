@@ -5,6 +5,7 @@ generated files are emitted to the live trace and written to the audit ledger un
 """
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from pathlib import Path
@@ -26,7 +27,7 @@ async def api_call(ctx: CaseContext, actor: str, method: str, url: str, request:
                    handler: Callable[[], Any], *, live: bool = False) -> Any:
     t0 = time.perf_counter()
     try:
-        resp = handler()
+        resp = await asyncio.to_thread(handler)
         if hasattr(resp, "model_dump"):
             resp = resp.model_dump()
         ok = True

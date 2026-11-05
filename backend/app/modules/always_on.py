@@ -4,6 +4,8 @@ Combines the reasoning summary and next-step suggestions into a single call to s
 """
 from __future__ import annotations
 
+import asyncio
+
 from pydantic import BaseModel
 
 from .. import llm
@@ -30,7 +32,8 @@ class ReasoningAndNextSteps(Module):
     async def run(self, ctx: CaseContext, **kw) -> ModuleResult:
         facts = {k: v for k, v in ctx.scratch.items() if k not in {"submodule_hint"} and not isinstance(v, (bytes,))}
         if llm.available():
-            out, meta = llm.chat_json(
+            out, meta = await asyncio.to_thread(
+                llm.chat_json,
                 "summarise",
                 "Summarise what the government agents did for this case in 2 short sentences for the citizen, then "
                 "give up to 3 practical next steps for the citizen. Use only the facts given. final_outcome is authoritative: "

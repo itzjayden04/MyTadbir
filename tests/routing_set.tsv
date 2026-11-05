@@ -1,0 +1,46 @@
+text	expected
+Longkang tersumbat depan sekolah, air dah naik	incident_dispatcher
+The drain near my house is clogged and smells	incident_dispatcher
+Saya nak buka kafe di Petaling Jaya, perlu lesen apa?	licence_precheck
+I want to apply for a business licence for my shop	licence_precheck
+Nak tempah dewan komuniti untuk kenduri	facility_booking
+Ada orang buat pembuangan haram tepi sungai	waste_scheduler
+Lampu jalan rosak di Jalan 14/2 dah seminggu	streetlight_road
+There is a big pothole on the main road	streetlight_road
+Macam mana nak mohon lesen penjaja?	hawker_licence
+I want to renovate my house, do I need a permit?	renovation_permit
+Jiran buat bising setiap malam	noise_pest
+Saya nak renew lesen memandu	licence_renewal
+How do I renew my driving licence?	licence_renewal
+Cukai jalan kereta saya dah tamat	roadtax_insurance
+Saya nak bayar saman	summons_payment
+Book a PUSPAKOM inspection for my car	puspakom
+Bila boleh ambil ujian memandu?	driving_test
+My father has chest pain and needs an ambulance	emergency_triage
+Saya perlu temu janji dengan doktor pakar	appointment_referral
+I need a refill of my diabetes medicine	pharmacy_refill
+Saya perlukan sijil cuti sakit	mc_document
+Daftar anak ke sekolah tahun satu	enrolment_transfer
+Is my son eligible for a scholarship?	scholarship_prescreen
+Siling kelas bocor di sekolah anak saya	school_infra
+I lost my SPM certificate, how to get a copy of the sijil spm	exam_document
+Anak saya autisme, perlukan pendidikan khas	special_needs
+Saya nak renew pasport	passport_renewal
+Do I need a visa to visit Japan?	visa_eligibility
+Permit kerja pekerja asing saya hampir tamat	foreign_worker
+How do I file my income tax this year?	tax_filing
+Bila saya dapat bayaran balik cukai?	refund_dispute
+Saya ibu tunggal, nak mohon bantuan JKM	aid_eligibility
+I think a child next door is being abused	child_protection
+Bantuan untuk warga emas yang tinggal seorang	elderly_oku
+Rumah saya kena banjir, kami mangsa banjir	disaster_relief
+Kereta saya dicuri semalam	police_report
+Saya hilang mykad	lost_document
+My husband hit me again last night, domestic violence	domestic_violence
+Nak mohon subsidi baja untuk petani	agri_subsidy
+Kilang sebelah buat pencemaran, asap kilang tebal	pollution_complaint
+Ada tanah runtuh dekat bukit belakang rumah	flood_landslide
+Bekalan elektrik terputus sejak pagi	utility_outage
+I need a certified copy of my birth certificate	doc_request_verify
+Saya nak renew lesen memandu dan bayar saman	summons_payment,licence_renewal
+Renew my driving licence and pay my summons	summons_payment,licence_renewal

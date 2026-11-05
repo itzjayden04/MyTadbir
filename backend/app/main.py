@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import secrets
 import uuid
 from contextlib import asynccontextmanager
@@ -27,7 +28,7 @@ from .modules import always_on  # noqa: F401
 from .router import case_manager
 from .router.intent_router import route
 from .router.schemas import RoutingDecision
-from .services import audit, rag
+from .services import audit, memory_bag, rag
 
 ROOT = Path(__file__).resolve().parents[2]
 UPLOADS = Path(__file__).resolve().parents[1] / "data" / "uploads"
@@ -40,6 +41,8 @@ SESSIONS: dict[str, str] = {}  # token -> user id (demo only)
 async def lifespan(_: FastAPI):
     init_db()
     seed()
+    if os.environ.get("MYTADBIR_OFFLINE") != "1":
+        memory_bag.start_scheduler()
     audit.log("system", "startup", {"llm": "deepseek" if llm.available() else "offline"})
     yield
 
@@ -325,7 +328,51 @@ def policy_search(q: str, dept: str | None = None, k: int = 10):
 
 @app.get("/api/policy/documents")
 def policy_documents():
-    return json.loads((rag.CORPUS / "manifest.json").read_text("utf-8"))
+    return memory_bag.documents()
+
+
+# ---------------------------------------------------------------- memory bag (officer)
+def officer(u: User = Depends(current_user)) -> User:
+    if u.role != "officer":
+        raise HTTPException(403, "Officer only")
+    return u
+
+
+@app.get("/api/memory-bag")
+def memory_bag_status():
+    return memory_bag.status()
+
+
+@app.post("/api/memory-bag/rescan")
+async def memory_bag_rescan(force: bool = True, u: User = Depends(officer)):
+    res = await asyncio.to_thread(memory_bag.sync, force)
+    audit.log(u.id, "memory_bag_rescan", res)
+    return res
+
+
+@app.post("/api/memory-bag/documents")
+async def memory_bag_add(file: UploadFile = File(...), title_en: str = Form(""), title_bm: str = Form(""),
+                         dept: str = Form("cross_agency"), kind: str = Form("document"), agency: str = Form(""),
+                         url: str = Form(""), as_at: str = Form(""), u: User = Depends(officer)):
+    data = await file.read()
+    res = await asyncio.to_thread(memory_bag.add_manual, {"title_en": title_en, "title_bm": title_bm, "dept": dept, "kind": kind,
+                                  "agency": agency, "url": url, "as_at": as_at}, file.filename, data)
+    audit.log(u.id, "memory_bag_" + res["op"], res)
+    return res
+
+
+@app.delete("/api/memory-bag/documents/{doc_id}")
+def memory_bag_delete(doc_id: str, u: User = Depends(officer)):
+    res = memory_bag.delete_doc(doc_id)
+    audit.log(u.id, "memory_bag_delete", res)
+    return res
+
+
+@app.post("/api/memory-bag/documents/{doc_id}/restore")
+async def memory_bag_restore(doc_id: str, u: User = Depends(officer)):
+    res = await asyncio.to_thread(memory_bag.restore_doc, doc_id)
+    audit.log(u.id, "memory_bag_restore", res)
+    return res
 
 
 # ---------------------------------------------------------------- demo control (presenter)

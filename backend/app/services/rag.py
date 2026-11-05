@@ -107,12 +107,21 @@ def build_index() -> dict:
     return {"documents": len(manifest), "chunks": n_chunks, "no_text": empty}
 
 
+def invalidate() -> None:
+    """Called by the Memory Bag after an add / update / delete, so the next search sees the new state."""
+    _load.cache_clear()
+
+
 @lru_cache(maxsize=1)
 def _load():
-    from rank_bm25 import BM25Okapi
+    from rank_bm25 import BM25Plus
 
-    chunks = [json.loads(line) for line in open(INDEX, encoding="utf-8")] if INDEX.exists() else []
-    bm25 = BM25Okapi([_tokens(c["title_en"] + " " + c["title_bm"] + " " + c["text"]) for c in chunks]) if chunks else None
+    from . import memory_bag
+
+    chunks = memory_bag.load_chunks()  # remembered scan state; no re-reading of documents
+    if not chunks and INDEX.exists():
+        chunks = [json.loads(line) for line in open(INDEX, encoding="utf-8")]
+    bm25 = BM25Plus([_tokens(c["title_en"] + " " + c["title_bm"] + " " + c["text"]) for c in chunks]) if chunks else None
     return chunks, bm25
 
 

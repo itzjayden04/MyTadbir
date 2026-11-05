@@ -332,22 +332,67 @@ function ApprovalsView({ t, lang, user, onDecide }) {
     </div>`)}</div>`;
 }
 
-function PolicyView({ t, lang }) {
+function MemoryBag({ t, lang, user, onChange }) {
+  const [st, setSt] = useState(null); const [busy, setBusy] = useState(""); const [msg, setMsg] = useState("");
+  const [form, setForm] = useState({ title_en: "", title_bm: "", dept: "local_gov", kind: "document", agency: "", url: "", as_at: "" });
+  const fileRef = useRef(null); const B = lang === "bm"; const isOfficer = user.role === "officer";
+  const load = () => api("/api/memory-bag").then(setSt).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const rescan = async () => { setBusy("scan"); setMsg(""); try { const r = await api("/api/memory-bag/rescan?force=true", { method: "POST" }); setMsg(JSON.stringify(r)); } catch (e) { setMsg(e.message); } setBusy(""); load(); onChange(); };
+  const upload = async (e) => {
+    e.preventDefault(); const f = fileRef.current.files[0]; if (!f) return;
+    const fd = new FormData(); fd.append("file", f); Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+    setBusy("up"); setMsg("");
+    try { const r = await api("/api/memory-bag/documents", { method: "POST", form: fd }); setMsg(`${r.op}: ${r.doc_id}${r.chunks ? " · " + r.chunks + (B ? " petikan" : " passages") : ""}`); fileRef.current.value = ""; }
+    catch (err) { setMsg(err.message); }
+    setBusy(""); load(); onChange();
+  };
+  const OP = { add: "good", update: "accent", delete: "bad", check_failed: "warn" };
+  if (!st) return null;
+  return html`<div class="card" style=${{ marginBottom: 16 }}>
+    <div class="card-h"><b>${B ? "Beg Memori" : "Memory Bag"}</b><span class="pill good">${st.active_documents} ${B ? "dokumen aktif" : "active documents"}</span>
+      <span class="pill">${st.chunks.toLocaleString()} ${B ? "petikan" : "passages"}</span>${st.deleted_documents ? html`<span class="pill bad">${st.deleted_documents} ${B ? "dipadam" : "deleted"}</span>` : null}</div>
+    <div class="muted" style=${{ fontSize: 13.5 }}>${B ? "Ejen membaca terus dari Beg Memori; dokumen tidak diimbas semula pada setiap permohonan. Imbasan semula automatik sebulan sekali, hanya yang berubah dikemas kini." : "Agents read straight from the Memory Bag; documents are not re-scanned on each request. An automatic re-scan runs once a month and only changes what changed."}
+      <br/>${B ? "Imbasan penuh terakhir" : "Last full scan"}: <b>${st.last_full_scan ? fmtDate(st.last_full_scan) : "-"}</b> · ${B ? "Seterusnya" : "Next"}: <b>${st.next_scan ? fmtDate(st.next_scan) : "-"}</b></div>
+    ${isOfficer && html`<div style=${{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}><button class="btn" disabled=${!!busy} onClick=${rescan}>${busy === "scan" ? "…" : (B ? "Imbas semula sekarang" : "Re-scan now")}</button></div>
+      <form onSubmit=${upload} class="toolbar" style=${{ marginTop: 10 }}>
+        <input type="file" ref=${fileRef} accept=".pdf,.html,.htm" style=${{ minWidth: 0, flex: "1 1 200px" }} />
+        <input placeholder=${B ? "Tajuk (EN)" : "Title (EN)"} value=${form.title_en} onInput=${(e) => setForm({ ...form, title_en: e.target.value })} style=${{ minWidth: 0, flex: "1 1 180px" }} />
+        <input placeholder=${B ? "Tajuk (BM)" : "Title (BM)"} value=${form.title_bm} onInput=${(e) => setForm({ ...form, title_bm: e.target.value })} style=${{ minWidth: 0, flex: "1 1 180px" }} />
+        <select value=${form.dept} onChange=${(e) => setForm({ ...form, dept: e.target.value })}>${Object.keys(DEPT_ICON).map((k) => html`<option>${k}</option>`)}</select>
+        <input placeholder=${B ? "Pautan sumber rasmi" : "Official source link"} value=${form.url} onInput=${(e) => setForm({ ...form, url: e.target.value })} style=${{ minWidth: 0, flex: "1 1 200px" }} />
+        <button class="btn primary" disabled=${!!busy}>${busy === "up" ? "…" : (B ? "Tambah / kemas kini" : "Add / update")}</button></form>
+      <div class="muted" style=${{ fontSize: 12.5 }}>${B ? "Untuk laman yang perlu log masuk: muat turun sekali, muat naik di sini. Muat naik semula versi baharu untuk kemas kini." : "For sites that need a login: download once, upload here. Upload a newer version later to update it."}</div>`}
+    ${msg && html`<div class="mono" style=${{ marginTop: 8 }}>${msg}</div>`}
+    <details style=${{ marginTop: 10 }}><summary class="eyebrow" style=${{ cursor: "pointer" }}>${B ? "Log perubahan" : "Change log"} (${st.recent_changes.length})</summary>
+      <div class="tbl-wrap" style=${{ marginTop: 8 }}><table><tbody>${st.recent_changes.map((e) => html`<tr key=${e.id}><td class="mono muted">${fmtDate(e.ts)}</td><td><span class=${"pill " + (OP[e.op] || "")}>${e.op}</span></td><td class="mono">${e.doc_id}</td><td class="muted">${e.detail}</td></tr>`)}</tbody></table></div></details>
+  </div>`;
+}
+
+function PolicyView({ t, lang, user }) {
   const [q, setQ] = useState(""); const [hits, setHits] = useState([]); const [docs, setDocs] = useState([]); const [dept, setDept] = useState("");
-  useEffect(() => { api("/api/policy/documents").then(setDocs).catch(() => {}); }, []);
+  const loadDocs = () => api("/api/policy/documents").then(setDocs).catch(() => {});
+  useEffect(() => { loadDocs(); }, []);
   const run = async (e) => { e && e.preventDefault(); if (q.trim()) setHits(await api(`/api/policy/search?q=${encodeURIComponent(q)}${dept ? "&dept=" + dept : ""}`)); };
-  const access = (d) => d.access || (d.kind === "webpage" ? "public" : "public");
+  const B = lang === "bm"; const isOfficer = user.role === "officer";
+  const act = async (d) => { await api(d.status === "deleted" ? `/api/memory-bag/documents/${d.doc_id}/restore` : `/api/memory-bag/documents/${d.doc_id}`, { method: d.status === "deleted" ? "POST" : "DELETE" }); loadDocs(); };
+  const ACCESS = { public: ["good", t.public], login: ["warn", t.needsLogin] };
   return html`<div>
+    <${MemoryBag} t=${t} lang=${lang} user=${user} onChange=${loadDocs} />
     <form class="toolbar" onSubmit=${run}><input placeholder=${t.policyPh} value=${q} onInput=${(e) => setQ(e.target.value)} />
       <select value=${dept} onChange=${(e) => setDept(e.target.value)}><option value="">${t.dept}: all</option>${[...new Set(docs.map((d) => d.dept))].map((k) => html`<option>${k}</option>`)}</select>
       <button class="btn primary">${t.search}</button></form>
-    ${hits.length > 0 && html`<div class="grid" style=${{ marginBottom: 18 }}>${hits.map((h) => html`<div class="card"><div class="card-h"><b>${lang === "bm" ? h.title_bm : h.title_en}</b><span class="pill">${lang === "bm" ? "ms" : "p."} ${h.page}</span><span class="pill accent">${h.dept}</span><a style=${{ marginLeft: "auto" }} href=${h.url} target="_blank" rel="noopener">${lang === "bm" ? "Sumber rasmi" : "Official source"} ↗</a></div><div class="muted" style=${{ fontSize: 13.5 }}>${h.excerpt}…</div></div>`)}</div>`}
-    <div class="h2">${lang === "bm" ? `Korpus (${docs.length} dokumen)` : `Corpus (${docs.length} documents)`}</div>
+    ${hits.length > 0 && html`<div class="grid" style=${{ marginBottom: 18 }}>${hits.map((h) => html`<div class="card"><div class="card-h"><b>${B ? h.title_bm : h.title_en}</b><span class="pill">${B ? "ms" : "p."} ${h.page}</span><span class="pill accent">${h.dept}</span><a style=${{ marginLeft: "auto" }} href=${h.url} target="_blank" rel="noopener">${B ? "Sumber rasmi" : "Official source"} ↗</a></div><div class="muted" style=${{ fontSize: 13.5 }}>${h.excerpt}…</div></div>`)}</div>`}
+    <div class="h2">${B ? `Korpus (${docs.length} dokumen)` : `Corpus (${docs.length} documents)`}</div>
     <${Table} empty=${t.none} rows=${docs} cols=${[
-      { h: lang === "bm" ? "Dokumen" : "Document", v: (d) => html`<a href=${d.url} target="_blank" rel="noopener">${lang === "bm" ? d.title_bm : d.title_en}</a>` },
-      { h: lang === "bm" ? "Agensi" : "Agency", v: (d) => d.agency }, { h: "Type", v: (d) => html`<span class="pill">${d.kind}</span>` },
-      { h: lang === "bm" ? "Setakat" : "As at", v: (d) => d.as_at || "-" }, { h: t.access, v: (d) => html`<span class="pill good">${t[access(d)] || access(d)}</span>` },
-      { h: "SHA-256", v: (d) => html`<span class="mono muted">${(d.sha256 || "").slice(0, 12)}</span>` }]} />
+      { h: B ? "Dokumen" : "Document", v: (d) => html`${d.url ? html`<a href=${d.url} target="_blank" rel="noopener">${B ? d.title_bm : d.title_en}</a>` : (B ? d.title_bm : d.title_en)}<div class="muted" style=${{ fontSize: 12 }}>${d.agency}</div>` },
+      { h: t.dept, v: (d) => DEPT_ICON[d.dept] + " " + d.dept }, { h: "Type", v: (d) => html`<span class="pill">${d.kind}</span>` },
+      { h: B ? "Setakat" : "As at", v: (d) => d.as_at || "-" },
+      { h: t.access, v: (d) => { const a = ACCESS[d.access] || ACCESS.public; return html`<span class=${"pill " + a[0]}>${a[1]}</span>`; } },
+      { h: B ? "Disemak" : "Checked", v: (d) => html`<span class="mono muted">${d.last_checked ? fmtDate(d.last_checked) : "-"}</span>` },
+      { h: t.status, v: (d) => html`<span class=${"pill " + (d.status === "active" ? "good" : "bad")}>${d.status}</span> <span class="mono muted">${d.n_chunks}</span>` },
+      ...(isOfficer ? [{ h: "", v: (d) => html`<button class=${"btn " + (d.status === "deleted" ? "" : "bad")} onClick=${() => act(d)}>${d.status === "deleted" ? (B ? "Pulihkan" : "Restore") : (B ? "Padam" : "Delete")}</button>` }] : []),
+    ]} />
   </div>`;
 }
 
@@ -415,7 +460,7 @@ function App() {
   const [msgs, setMsgs] = useState({}); // thread -> [{text, previews}]
   const [evs, setEvs] = useState({});   // thread -> events
   const [threadCases, setThreadCases] = useState([]);
-  const [traceOn, setTraceOn] = useState(true); const [preset, setPreset] = useState(null); const [draft, setDraft] = useState("");
+  const [traceOn, setTraceOn] = useState(true); const [navOpen, setNavOpen] = useState(false); const [traceOpen, setTraceOpen] = useState(false); const [preset, setPreset] = useState(null); const [draft, setDraft] = useState("");
   const [auditCase, setAuditCase] = useState(null); const [search, setSearch] = useState("");
   const esRef = useRef(null);
   const t = I18N[lang];
@@ -486,29 +531,32 @@ function App() {
     case "map": body = html`<${MapView} lang=${lang} />`; break;
     case "impact": body = html`<${ImpactView} lang=${lang} />`; break;
     case "approvals": body = html`<${ApprovalsView} t=${t} lang=${lang} user=${user} onDecide=${onDecide} />`; break;
-    case "policy": body = html`<${PolicyView} t=${t} lang=${lang} />`; break;
+    case "policy": body = html`<${PolicyView} t=${t} lang=${lang} user=${user} />`; break;
     case "audit": body = html`<${AuditView} t=${t} lang=${lang} cases=${cases} caseId=${auditCase} setCaseId=${setAuditCase} />`; break;
     case "demo": body = html`<${DemoView} t=${t} lang=${lang} quick=${quick} logout=${logout} />`; break;
     case "settings": body = html`<${SettingsView} t=${t} lang=${lang} setLang=${setLang} theme=${theme} setTheme=${setTheme} user=${user} />`; break;
     case "help": body = html`<${HelpView} lang=${lang} />`; break;
     default: body = null;
   }
-  return html`<div class=${"shell" + (traceOn ? "" : " trace-off")}>
-    <${Sidebar} t=${t} lang=${lang} user=${user} view=${view} setView=${setView} catalog=${catalog} cases=${cases} threads=${threads} pins=${pins} togglePin=${togglePin}
-      openThread=${openThread} newRequest=${newRequest} launchDept=${(k) => { newRequest(); setPreset(k); }} logout=${logout} theme=${theme} setTheme=${setTheme} />
+  const wide = () => window.innerWidth > 1280;
+  const go = (v) => { setView(v); setNavOpen(false); };
+  return html`<div class=${"shell" + (traceOn ? "" : " trace-off") + (navOpen ? " nav-open" : "") + (traceOpen ? " trace-open" : "")}>
+    ${(navOpen || traceOpen) && html`<div class="backdrop" onClick=${() => { setNavOpen(false); setTraceOpen(false); }}></div>`}
+    <${Sidebar} t=${t} lang=${lang} user=${user} view=${view} setView=${go} catalog=${catalog} cases=${cases} threads=${threads} pins=${pins} togglePin=${togglePin}
+      openThread=${(id) => { setNavOpen(false); openThread(id); }} newRequest=${() => { setNavOpen(false); newRequest(); }} launchDept=${(k) => { setNavOpen(false); newRequest(); setPreset(k); }} logout=${logout} theme=${theme} setTheme=${setTheme} />
     <main class="main">
-      <div class="top"><h1>${t[titleKey] || titleKey}</h1>
+      <div class="top"><button class="btn hamburger" aria-label="Menu" onClick=${() => setNavOpen(true)}>☰</button><h1>${t[titleKey] || titleKey}</h1>
         ${view === "search" && html`<input class="btn" style=${{ fontWeight: 400, minWidth: 260 }} placeholder=${t.searchPh} value=${search} onInput=${(e) => setSearch(e.target.value)} />`}
         <span class="sp"></span>
         <span class="agent-badge" title="Active agent"><span class=${"dot" + (last && last.event !== "thread_done" && last.event !== "case_done" ? " live" : "")}></span>${last ? `${last.actor}${modelOf(last) ? " · " + modelOf(last) : ""}` : (user.role === "officer" ? t.officerMode : t.citizenMode)}</span>
         <div class="seg"><button class=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>EN</button><button class=${lang === "bm" ? "on" : ""} onClick=${() => setLang("bm")}>BM</button></div>
-        ${!traceOn && html`<button class="btn" onClick=${() => setTraceOn(true)}>${t.trace}</button>`}
+        <button class=${"btn trace-btn" + (traceOn ? " when-narrow" : "")} onClick=${() => { setTraceOn(true); if (!wide()) setTraceOpen(true); }}>⚡ <span class="lbl">${t.trace}</span></button>
       </div>
       ${view === "console" ? html`<${Console} t=${t} lang=${lang} user=${user} catalog=${catalog} thread=${threadId ? { messages: msgs[threadId] || [] } : null} events=${events}
           cases=${threadCases} approvals=${approvals} send=${send} onDecide=${onDecide} preset=${preset} setPreset=${setPreset} draft=${draft} setDraft=${setDraft} />`
         : html`<div class="view">${body}</div>`}
     </main>
-    ${traceOn && html`<${TracePanel} t=${t} lang=${lang} events=${events} threadId=${threadId} onClose=${() => setTraceOn(false)} />`}
+    ${traceOn && html`<${TracePanel} t=${t} lang=${lang} events=${events} threadId=${threadId} onClose=${() => { if (wide()) setTraceOn(false); setTraceOpen(false); }} />`}
   </div>`;
 }
 

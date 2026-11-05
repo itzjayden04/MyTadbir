@@ -29,7 +29,6 @@ a{color:var(--accent)}
 /* ---------- shell */
 .shell{display:grid;grid-template-columns:272px minmax(0,1fr) 380px;height:100%}
 .shell.trace-off{grid-template-columns:272px minmax(0,1fr) 0}
-@media (max-width:1100px){.shell,.shell.trace-off{grid-template-columns:240px minmax(0,1fr) 0}.trace{display:none}}
 
 /* ---------- sidebar */
 .side{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--side-line)}
@@ -201,3 +200,40 @@ tr.click:hover td{background:var(--surface-2)}
 .demo-accts button{border:0;background:none;color:var(--accent);font-weight:600;padding:0;text-decoration:underline}
 .modal-bg{position:fixed;inset:0;background:rgba(5,10,20,.5);display:grid;place-items:center;z-index:2000;padding:16px}
 .modal{background:var(--surface);border-radius:12px;padding:20px 22px;max-width:640px;width:100%;max-height:85vh;overflow:auto}
+
+/* ---------- adaptive layout
+   > 1280px: sidebar | workspace | trace (three columns)
+   901-1280: sidebar | workspace; the trace slides in from the right as a drawer
+   <= 900:   workspace only; sidebar and trace are drawers; tables scroll sideways inside their box */
+.hamburger,.trace-btn.when-narrow{display:none}
+.backdrop{position:fixed;inset:0;background:rgba(5,10,20,.45);z-index:900}
+@media (max-width:1280px){
+  .shell,.shell.trace-off{grid-template-columns:272px minmax(0,1fr)}
+  .trace{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);z-index:1000;transform:translateX(100%);transition:transform .25s ease;display:flex;box-shadow:-8px 0 24px rgba(0,0,0,.18)}
+  .shell.trace-open .trace{transform:none}
+  .trace-btn.when-narrow{display:inline-flex}
+}
+@media (max-width:900px){
+  .shell,.shell.trace-off{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;top:0;left:0;bottom:0;width:min(300px,86vw);z-index:1000;transform:translateX(-105%);transition:transform .25s ease}
+  .shell.nav-open .side{transform:none}
+  .hamburger{display:inline-flex}
+  .top{padding:10px max(12px,env(safe-area-inset-left,0px));gap:8px;flex-wrap:wrap}
+  .top h1{font-size:16px}
+  .agent-badge{display:none}
+  .trace-btn .lbl{display:none}
+  .view{padding:14px 12px 24px}
+  .feed{padding:14px 12px}
+  .composer{padding:10px 12px 12px}
+  .templates{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+  .templates .chip{flex:none}
+  .msg-user{max-width:92%}
+  .intent{grid-template-columns:1fr auto}
+  .intent>:first-child{grid-column:1/-1}
+  .conf{width:70px}
+  .card{padding:12px}
+  .toolbar input{min-width:0}
+  .stat b{font-size:22px}
+  #map{height:calc(100vh - 150px)}
+}
+@media (prefers-reduced-motion:reduce){.trace,.side{transition:none}}

@@ -11,3 +11,4 @@ corpus/raw/*.tmp
 corpus/raw/
 corpus/index.jsonl
 data/
+corpus/memory_bag.db

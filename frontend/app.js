@@ -12,7 +12,7 @@ async function api(path, { method = "GET", body, form } = {}) {
   const headers = TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {};
   if (body) headers["Content-Type"] = "application/json";
   const r = await fetch(path, { method, headers, body: form || (body ? JSON.stringify(body) : undefined) });
-  if (!r.ok) { let d = r.statusText; try { d = (await r.json()).detail || d; } catch {} throw new Error(d); }
+  if (!r.ok) { let d = r.statusText; try { d = (await r.json()).detail || d; } catch {} if (d && typeof d === "object") d = (store.get("mt-lang", "en") === "bm" ? d.bm : d.en) || JSON.stringify(d); throw new Error(d); }
   return r.json();
 }
 const newThreadId = () => "TH-" + Math.random().toString(16).slice(2, 10).toUpperCase();
@@ -69,29 +69,20 @@ function Login({ t, lang, setLang, onIn }) {
   const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const go = async (fn) => { setBusy(true); setErr(""); try { onIn(await fn()); } catch (e) { setErr(e.message); } setBusy(false); };
   return html`<div class="login">
-    <section class="login-art">
-      <div><div class="brand" style=${{ padding: 0 }}><div class="brand-mark">MT</div><div><b>MyTadbir</b><small>${t.tagline}</small></div></div></div>
-      <div><h1>${lang === "bm" ? "Satu permohonan. Jabatan yang betul. Tindakan sebenar." : "One request. The right department. Real action."}</h1>
-        <p>${t.loginLead}</p>
-        <div class="flow"><div><b>1</b> ${t.router}</div><div><b>2</b> ${lang === "bm" ? "Satu modul utama jabatan" : "One department main module"}</div><div><b>3</b> ${lang === "bm" ? "Sub-modul & perkhidmatan dikongsi" : "Sub-modules & shared services"}</div><div><b>4</b> ${lang === "bm" ? "Satu ID kes, satu lejar audit" : "One case ID, one audit ledger"}</div></div></div>
-      <small style=${{ color: "var(--side-muted)" }}>Festival Idea Putrajaya 2026 · Agentic AI Challenge</small>
-    </section>
-    <section class="login-form"><div class="login-card">
-      <div style=${{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><h2>${t.login}</h2>
-        <div class="seg"><button class=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>EN</button><button class=${lang === "bm" ? "on" : ""} onClick=${() => setLang("bm")}>BM</button></div></div>
-      <button class="btn primary" style=${{ width: "100%", marginTop: 18, padding: "11px" }} disabled=${busy} onClick=${() => go(() => api("/api/auth/mydigitalid", { method: "POST" }))}>🔐 ${t.mydid}</button>
+    <div class="login-top"><div class="seg"><button class=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>EN</button><button class=${lang === "bm" ? "on" : ""} onClick=${() => setLang("bm")}>BM</button></div></div>
+    <main class="login-card">
+      <div class="login-brand"><div class="brand-mark">M</div><b>MyTadbir</b></div>
+      <p class="muted login-sub">${lang === "bm" ? "Satu pintu untuk semua perkhidmatan kerajaan" : "One front door to government services"}</p>
+      <button class="btn primary login-btn" disabled=${busy} onClick=${() => go(() => api("/api/auth/mydigitalid", { method: "POST" }))}>${t.mydid}</button>
       <div class="or">${lang === "bm" ? "atau" : "or"}</div>
       <form onSubmit=${(e) => { e.preventDefault(); go(() => api("/api/auth/login", { method: "POST", body: { username: u, password: p } })); }}>
         <div class="field"><label for="u">${t.username}</label><input id="u" value=${u} onInput=${(e) => setU(e.target.value)} autocomplete="username" /></div>
         <div class="field"><label for="p">${t.password}</label><input id="p" type="password" value=${p} onInput=${(e) => setP(e.target.value)} autocomplete="current-password" /></div>
         ${err && html`<div class="err">${err}</div>`}
-        <button class="btn" style=${{ width: "100%", marginTop: 16, padding: "10px" }} disabled=${busy}>${t.login}</button>
+        <button class="btn login-btn" style=${{ marginTop: 16 }} disabled=${busy}>${t.login}</button>
       </form>
-      <div class="demo-accts"><b>${t.demoAccts}</b><br/>
-        ${lang === "bm" ? "Rakyat" : "Citizen"}: <button onClick=${() => { setU("aisyah"); setP("Demo@2026"); }}>aisyah</button> ·
-        ${lang === "bm" ? "Pegawai" : "Officer"}: <button onClick=${() => { setU("pegawai"); setP("Officer@2026"); }}>pegawai</button>
-        <div style=${{ marginTop: 4 }}>${lang === "bm" ? "Akaun rekaan untuk demo sahaja." : "Fictitious accounts for the demo only."}</div></div>
-    </div></section>
+    </main>
+    <footer class="login-foot muted">© 2026 MyTadbir · ${lang === "bm" ? "Privasi" : "Privacy"} · ${lang === "bm" ? "Kebolehcapaian" : "Accessibility"} · ${lang === "bm" ? "Bantuan" : "Help"}</footer>
   </div>`;
 }
 
@@ -102,7 +93,7 @@ function Sidebar({ t, lang, user, view, setView, catalog, cases, threads, pins, 
   const countBy = useMemo(() => cases.reduce((m, c) => { if (c.status !== "done") m[c.current_department] = (m[c.current_department] || 0) + 1; return m; }, {}), [cases]);
   const active = cases.filter((c) => c.status !== "done").length;
   const Nav = (k, ico, cnt) => html`<button class=${"nav" + (view === k ? " on" : "")} onClick=${() => setView(k)}><span class="ico">${ico}</span>${t[k]}${cnt ? html`<span class="cnt">${cnt}</span>` : null}</button>`;
-  const Grp = (k, label, kids) => html`<div class="grp"><button class="grp-h" onClick=${() => tog(k)} aria-expanded=${open[k]}>${label}<span>${open[k] ? "–" : "+"}</span></button>${open[k] && kids}</div>`;
+  const Grp = (k, label, kids) => html`<div class="grp"><button class="grp-h" onClick=${() => tog(k)} aria-expanded=${open[k]}>${label}<svg class=${"chev" + (open[k] ? " open" : "")} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>${open[k] && kids}</div>`;
   const pinned = threads.filter((x) => pins.includes(x.thread_id)); const rest = threads.filter((x) => !pins.includes(x.thread_id));
   const Hist = (th) => html`<div style=${{ display: "flex", alignItems: "center" }}><button class="hist" onClick=${() => openThread(th.thread_id)}>${th.title || th.thread_id}<small>${th.cases.map((c) => c.case_id).join(", ") || th.thread_id}</small></button><button class="icon-btn" title="Pin" onClick=${() => togglePin(th.thread_id)}>${pins.includes(th.thread_id) ? "★" : "☆"}</button></div>`;
   return html`<aside class="side">
@@ -115,7 +106,7 @@ function Sidebar({ t, lang, user, view, setView, catalog, cases, threads, pins, 
         ${Nav("console", "⌘")}${Nav("search", "⌕")}`)}
       ${Grp("activity", t.g_activity, html`${Nav("cases", "▤", active)}${Nav("payments", "＄")}${Nav("documents", "🗎")}${Nav("calendar", "▦")}${Nav("inbox", "✉")}`)}
       ${Grp("live", t.g_live, html`${Nav("map", "⌖")}${Nav("impact", "▲")}`)}
-      ${Grp("gov", t.g_gov, html`${Nav("approvals", "✔")}${Nav("policy", "§")}${Nav("audit", "⛓")}${Nav("demo", "▶")}`)}
+      ${Grp("gov", t.g_gov, html`${Nav("approvals", "✔")}${Nav("policy", "§")}${Nav("audit", "⛓")}`)}
       ${Grp("conv", t.g_conv, html`${pinned.length ? html`<div class="grp-h" style=${{ cursor: "default" }}>${t.pinned}</div>${pinned.map(Hist)}` : null}
         <div class="grp-h" style=${{ cursor: "default" }}>${t.history}</div>${rest.length ? rest.slice(0, 30).map(Hist) : html`<div class="hist" style=${{ color: "var(--side-muted)" }}>${t.none}</div>`}`)}
     </div>
@@ -179,13 +170,14 @@ function CaseCard({ t, lang, c, events, user, onDecide, approvals }) {
 }
 
 function Console({ t, lang, user, catalog, thread, events, cases, approvals, send, onDecide, preset, setPreset, draft, setDraft }) {
-  const [files, setFiles] = useState([]); const [busy, setBusy] = useState(false);
+  const [files, setFiles] = useState([]); const [busy, setBusy] = useState(false); const [chips, setChips] = useState([]); const [err, setErr] = useState("");
+  useEffect(() => { api(`/api/suggestions?lang=${lang}`).then(setChips).catch(() => setChips([])); }, [lang, cases.length]);
   const feedRef = useRef(null); const fileRef = useRef(null);
   useEffect(() => { if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight; }, [events.length, cases.length, thread?.messages?.length]);
   const submit = async () => {
     if (!draft.trim() && !files.length) return;
     setBusy(true);
-    try { await send(draft, files.map((f) => f.file), preset); setDraft(""); setFiles([]); setPreset(null); } catch (e) { alert(e.message); }
+    setErr(""); try { await send(draft, files.map((f) => f.file), preset); setDraft(""); setFiles([]); setPreset(null); } catch (e) { setErr(e.message); }
     setBusy(false);
   };
   const routerEv = events.filter((e) => e.event === "classified");
@@ -202,16 +194,17 @@ function Console({ t, lang, user, catalog, thread, events, cases, approvals, sen
       ${cases.map((c) => html`<${CaseCard} key=${c.case_id} t=${t} lang=${lang} c=${c} events=${events} user=${user} onDecide=${onDecide} approvals=${approvals} />`)}
     </div></div>
     <div class="composer"><div class="composer-inner">
-      <div class="templates">${TEMPLATES.map((x) => html`<button class="chip" onClick=${() => setDraft(x.text)}>${lang === "bm" ? x.bm : x.en}</button>`)}
+      <div class="templates">${chips.map((x) => html`<button class="chip" key=${x.key} onClick=${() => setDraft(x.prompt)}>${x.label}</button>`)}
         ${preset && html`<span class="chip on">${t.to}: ${DEPT_ICON[preset]} ${(catalog.find((d) => d.key === preset) || {})[lang === "bm" ? "bm" : "en"]} <button style=${{ border: 0, background: "none" }} onClick=${() => setPreset(null)}>✕</button></span>`}</div>
       <div class="compose-row">
-        <button class="btn" onClick=${() => fileRef.current.click()} title=${t.attach}>📷</button>
-        <input ref=${fileRef} type="file" accept="image/*" multiple hidden onChange=${(e) => { setFiles([...files, ...[...e.target.files].map((f) => ({ file: f, url: URL.createObjectURL(f) }))]); e.target.value = ""; }} />
+        <button class="btn" onClick=${() => fileRef.current.click()} title=${lang === "bm" ? "Lampirkan foto atau fail (PDF, DOC, DOCX)" : "Attach a photo or file (PDF, DOC, DOCX)"} aria-label="Attach">📎</button>
+        <input ref=${fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx" multiple hidden onChange=${(e) => { setFiles([...files, ...[...e.target.files].map((f) => ({ file: f, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null }))]); e.target.value = ""; }} />
         <textarea id="composer" rows="1" placeholder=${t.placeholder} value=${draft} onInput=${(e) => setDraft(e.target.value)}
           onKeyDown=${(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}></textarea>
         <button class="btn primary" disabled=${busy} onClick=${submit}>${busy ? "…" : t.send}</button>
       </div>
-      ${files.length > 0 && html`<div class="attach">${files.map((f, i) => html`<div class="thumb"><img src=${f.url} alt="" /><button onClick=${() => setFiles(files.filter((_, j) => j !== i))}>✕</button></div>`)}</div>`}
+      ${err && html`<div class="err">${err}</div>`}
+      ${files.length > 0 && html`<div class="attach">${files.map((f, i) => html`<div class="thumb">${f.url ? html`<img src=${f.url} alt="" />` : html`<span class="filechip">🗎 ${f.file.name}</span>`}<button onClick=${() => setFiles(files.filter((_, j) => j !== i))}>✕</button></div>`)}</div>`}
     </div></div>
   </div>`;
 }
@@ -504,7 +497,7 @@ function App() {
     await subscribe(tid);
     setMsgs((s) => ({ ...s, [tid]: [...(s[tid] || []), { text, previews: files.map((f) => URL.createObjectURL(f)) }] }));
     const fd = new FormData(); fd.append("text", text); fd.append("thread_id", tid); if (dept) fd.append("department", dept);
-    files.forEach((f) => fd.append("photos", f));
+    files.forEach((f) => fd.append(f.type.startsWith("image/") ? "photos" : "files", f));
     await api("/api/requests", { method: "POST", form: fd });
     refresh();
   };
@@ -533,7 +526,6 @@ function App() {
     case "approvals": body = html`<${ApprovalsView} t=${t} lang=${lang} user=${user} onDecide=${onDecide} />`; break;
     case "policy": body = html`<${PolicyView} t=${t} lang=${lang} user=${user} />`; break;
     case "audit": body = html`<${AuditView} t=${t} lang=${lang} cases=${cases} caseId=${auditCase} setCaseId=${setAuditCase} />`; break;
-    case "demo": body = html`<${DemoView} t=${t} lang=${lang} quick=${quick} logout=${logout} />`; break;
     case "settings": body = html`<${SettingsView} t=${t} lang=${lang} setLang=${setLang} theme=${theme} setTheme=${setTheme} user=${user} />`; break;
     case "help": body = html`<${HelpView} lang=${lang} />`; break;
     default: body = null;

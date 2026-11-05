@@ -28,7 +28,7 @@ from .modules import always_on  # noqa: F401
 from .router import case_manager
 from .router.intent_router import route
 from .router.schemas import RoutingDecision
-from .services import audit, memory_bag, rag
+from .services import audit, intake, memory_bag, rag, tagger
 
 ROOT = Path(__file__).resolve().parents[2]
 UPLOADS = Path(__file__).resolve().parents[1] / "data" / "uploads"
@@ -124,19 +124,37 @@ def catalog():
 @app.post("/api/requests", response_model=RoutingDecision)
 async def submit_request(background: BackgroundTasks, text: str = Form(""), thread_id: str | None = Form(None),
                          department: str | None = Form(None), photos: list[UploadFile] = File(default=[]),
-                         u: User = Depends(current_user)):
-    paths = []
-    for f in photos:
-        if not f.filename:
-            continue
-        p = UPLOADS / f"{uuid.uuid4().hex[:8]}_{Path(f.filename).name}"
-        p.write_bytes(await f.read())
-        paths.append(str(p))
+                         files: list[UploadFile] = File(default=[]), u: User = Depends(current_user)):
+    """Accepts exactly three input types: text, images (photos[]) and files (files[]: PDF/DOC/DOCX)."""
+    staged: list[tuple[str, bytes, str]] = []
+    try:
+        for group, expect in ((photos, "image"), (files, "file")):
+            for f in group:
+                if not f.filename:
+                    continue
+                data = await f.read()
+                intake.check(f.filename, len(data), expect)
+                staged.append((f.filename, data, expect))
+    except intake.InputRejected as e:
+        raise HTTPException(415, {"en": e.en, "bm": e.bm}) from e
+    if not text.strip() and not staged:
+        raise HTTPException(400, {"en": "Type a message or attach a photo or file.", "bm": "Taip mesej atau lampirkan foto atau fail."})
+    paths, doc_paths, excerpts = [], [], []
+    for name, data, expect in staged:
+        p = UPLOADS / f"{uuid.uuid4().hex[:8]}_{Path(name).name}"
+        p.write_bytes(data)
+        (paths if expect == "image" else doc_paths).append(str(p))
+        if expect == "file":
+            ex = await asyncio.to_thread(intake.excerpt, str(p))
+            if ex:
+                excerpts.append(f"[Attached file {Path(name).name}]: {ex}")
     hint = f"[Citizen chose department: {department}] " if department else ""
-    decision = await route(hint + text, image_paths=paths, thread_id=thread_id, citizen_ref=u.id,
+    body = hint + text + ("\n\n" + "\n".join(excerpts) if excerpts else "")
+    decision = await route(body, image_paths=paths,
+                           doc_paths=doc_paths, thread_id=thread_id, citizen_ref=u.id,
                            identity={"user_id": u.id, "name": u.name, "mykad": u.mykad})
     with SessionLocal() as s:
-        for p in paths:
+        for p in paths + doc_paths:
             s.add(Document(id=f"DOC-{uuid.uuid4().hex[:8].upper()}", case_id=decision.intents[0].case_id if decision.intents else None,
                            user_id=u.id, department=decision.intents[0].department if decision.intents else None,
                            kind="upload", title=Path(p).name.split("_", 1)[-1], path=p))
@@ -256,7 +274,57 @@ def documents(u: User = Depends(current_user)):
         if u.role == "citizen":
             q = q.where((Document.user_id == u.id) | (Document.user_id.is_(None)))
         return [{"id": d.id, "case_id": d.case_id, "department": d.department, "kind": d.kind, "title": d.title,
+                 "tags": sorted(tagger.tag_text(d.title, dept=d.department, kind=d.kind)),
                  "created_at": d.created_at.isoformat()} for d in s.scalars(q)]
+
+
+@app.get("/api/tags")
+def tags(prefix: str | None = None, limit: int = 60):
+    """The tag index: how many documents and passages are filed under each label."""
+    return memory_bag.tag_counts(prefix, limit)
+
+
+SUGGEST = {
+    "drain": ("Report a clogged drain", "Lapor longkang tersumbat", "Longkang depan rumah saya tersumbat, air bertakung."),
+    "flood": ("Check flood warnings near me", "Semak amaran banjir berhampiran", "Ada amaran banjir di kawasan Petaling Jaya?"),
+    "roadtax": ("Renew my road tax", "Perbaharui cukai jalan", "Saya nak renew cukai jalan kereta saya."),
+    "summons": ("Check and pay my summons", "Semak dan bayar saman", "Saya nak semak dan bayar saman saya."),
+    "licence": ("Renew my driving licence", "Perbaharui lesen memandu", "Saya nak renew lesen memandu."),
+    "cafe": ("Licence check for a new café", "Semakan lesen kafe baharu", "Saya nak buka kafe di Petaling Jaya, perlu lesen apa?"),
+    "clinic": ("Book a clinic appointment", "Tempah temu janji klinik", "Saya nak buat temu janji di klinik kesihatan."),
+    "tax": ("File my income tax", "Isytihar cukai pendapatan", "Macam mana nak isi borang BE tahun ini?"),
+    "aid": ("Check welfare aid eligibility", "Semak kelayakan bantuan JKM", "Saya ibu tunggal, layak mohon bantuan JKM?"),
+    "passport": ("Renew my passport", "Perbaharui pasport", "Saya nak renew pasport."),
+    "track": ("Track my open case", "Jejak kes saya", "Apa status kes saya yang terbuka?"),
+}
+
+
+@app.get("/api/suggestions")
+def suggestions(lang: str = "en", u: User = Depends(current_user)):
+    """Quick-request chips for this user, ranked by context. Rule-based: no API tokens."""
+    from datetime import datetime as _dt
+
+    keys: list[str] = []
+    with SessionLocal() as s:
+        open_cases = s.scalar(select(func.count()).select_from(Case).join(Thread).where(
+            Thread.citizen_ref == u.id, Case.status.not_in(["done", "failed"]))) or 0
+        pending = s.scalar(select(func.count()).select_from(Payment).where(Payment.user_id == u.id, Payment.status == "pending")) or 0
+    if open_cases:
+        keys.append("track")
+    if pending:
+        keys.append("summons")
+    month = _dt.now().month
+    keys += ["flood", "drain"] if month in (10, 11, 12, 1) else ["drain"]  # northeast monsoon season
+    if month in (2, 3, 4, 5):
+        keys.append("tax")  # LHDN filing season
+    keys += ["roadtax", "summons", "licence", "cafe", "clinic", "aid", "passport"]
+    seen, out = set(), []
+    for k in keys:
+        if k not in seen:
+            seen.add(k)
+            en, bm, prompt = SUGGEST[k]
+            out.append({"key": k, "label": bm if lang == "bm" else en, "prompt": prompt})
+    return out[:6]
 
 
 @app.get("/api/documents/{doc_id}/file")

@@ -122,17 +122,41 @@ def _load():
     if not chunks and INDEX.exists():
         chunks = [json.loads(line) for line in open(INDEX, encoding="utf-8")]
     bm25 = BM25Plus([_tokens(c["title_en"] + " " + c["title_bm"] + " " + c["text"]) for c in chunks]) if chunks else None
-    return chunks, bm25
+    # Tag postings: tag -> positions of the passages filed under it.
+    postings: dict[str, set[int]] = {}
+    ctags = memory_bag.chunk_tag_map() if memory_bag.DB.exists() else {}
+    for i, c in enumerate(chunks):
+        c["tags"] = ctags.get(c["chunk_id"], [])
+        for t in c["tags"]:
+            postings.setdefault(t, set()).add(i)
+    return chunks, bm25, postings
 
 
-def search(query: str, *, dept: str | None = None, kinds: set[str] | None = None, k: int = 5) -> list[dict]:
-    chunks, bm25 = _load()
+def search(query: str, *, dept: str | None = None, kinds: set[str] | None = None, k: int = 5,
+           tags: set[str] | None = None, explain: bool = False):
+    """Tag-first lookup: narrow to passages filed under the query's tags, rank only those with BM25.
+    Falls back to the whole bag when the tags find too little. explain=True also returns how it narrowed."""
+    from . import tagger
+
+    chunks, bm25, postings = _load()
+    info = {"tags": [], "candidates": len(chunks), "total": len(chunks), "narrowed": False}
     if not bm25:
-        return []
-    scores = bm25.get_scores(_tokens(query))
-    ranked = sorted(range(len(chunks)), key=lambda i: -scores[i])
+        return ([], info) if explain else []
+    qtags = set(tags) if tags is not None else tagger.query_tags(query)
+    cand = set().union(*(postings.get(t, set()) for t in qtags)) if qtags else set()
+    if dept and cand:
+        cand = {i for i in cand if chunks[i]["dept"] == dept}
+    tokens = _tokens(query)
+    if len(cand) >= k:
+        idx = sorted(cand)
+        scores = dict(zip(idx, bm25.get_batch_scores(tokens, idx)))
+        info.update(tags=sorted(qtags), candidates=len(idx), narrowed=True)
+    else:
+        all_scores = bm25.get_scores(tokens)
+        scores = dict(enumerate(all_scores))
+        info.update(tags=sorted(qtags))
     hits, seen = [], set()
-    for i in ranked:
+    for i in sorted(scores, key=lambda j: -scores[j]):
         c = chunks[i]
         if scores[i] <= 0:
             break
@@ -147,7 +171,7 @@ def search(query: str, *, dept: str | None = None, kinds: set[str] | None = None
         hits.append({**c, "score": round(float(scores[i]), 2)})
         if len(hits) == k:
             break
-    return hits
+    return (hits, info) if explain else hits
 
 
 def cite(hit: dict, lang: str = "en") -> str:

@@ -28,7 +28,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import rag
+from . import rag, tagger
 
 CORPUS = rag.CORPUS
 DB = CORPUS / "memory_bag.db"
@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS chunks(chunk_id TEXT PRIMARY KEY, doc_id TEXT, page I
 CREATE INDEX IF NOT EXISTS chunks_doc ON chunks(doc_id);
 CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT, doc_id TEXT, op TEXT, detail TEXT);
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS tags(tag TEXT, doc_id TEXT, chunk_id TEXT);
+CREATE INDEX IF NOT EXISTS tags_tag ON tags(tag);
+CREATE INDEX IF NOT EXISTS tags_doc ON tags(doc_id);
 """
 DOC_FIELDS = ["url", "title_en", "title_bm", "dept", "kind", "lang", "agency", "as_at", "tier"]
 
@@ -85,9 +88,21 @@ def _log(con, doc_id: str, op: str, detail: str = "") -> None:
 
 
 # ---------------------------------------------------------------- the three state operations
+def _tag(con, entry: dict, rows) -> None:
+    """File the document and each passage under its tags (rules only, no API calls)."""
+    con.execute("DELETE FROM tags WHERE doc_id=?", (entry["doc_id"],))
+    dtags = tagger.doc_tags(entry)
+    con.executemany("INSERT INTO tags VALUES (?,?,NULL)", [(t, entry["doc_id"]) for t in dtags])
+    base = {t for t in dtags if t.split(":")[0] in {"topic", "act"}}
+    con.executemany("INSERT INTO tags VALUES (?,?,?)", [
+        (t, entry["doc_id"], cid) for cid, _, text in rows
+        for t in (tagger.tag_text(text, strict=True) | base) if t.split(":")[0] in {"topic", "act", "place"}])
+
+
 def add(con, entry: dict, path: Path, sha: str, size: int) -> int:
     rows = _chunks(entry["doc_id"], path)
     con.executemany("INSERT OR REPLACE INTO chunks VALUES (?,?,?,?)", [(cid, entry["doc_id"], p, t) for cid, p, t in rows])
+    _tag(con, entry, rows)
     now = _now()
     con.execute(
         f"INSERT OR REPLACE INTO docs(doc_id, {', '.join(DOC_FIELDS)}, access, sha256, bytes, file, n_chunks, status, first_seen, last_checked, last_changed)"
@@ -99,6 +114,7 @@ def add(con, entry: dict, path: Path, sha: str, size: int) -> int:
 
 def delete(con, doc_id: str, reason: str) -> None:
     con.execute("DELETE FROM chunks WHERE doc_id=?", (doc_id,))
+    con.execute("DELETE FROM tags WHERE doc_id=?", (doc_id,))
     con.execute("UPDATE docs SET status='deleted', n_chunks=0, last_changed=? WHERE doc_id=?", (_now(), doc_id))
     _log(con, doc_id, "delete", reason)
 
@@ -255,8 +271,48 @@ def status() -> dict:
 
 
 def documents() -> list[dict]:
+    tags = doc_tag_map()
     with _db() as con:
-        return [dict(r) for r in con.execute("SELECT * FROM docs ORDER BY dept, tier, doc_id")]
+        return [{**dict(r), "tags": sorted(tags.get(r["doc_id"], []))} for r in con.execute("SELECT * FROM docs ORDER BY dept, tier, doc_id")]
+
+
+def retag_all() -> dict:
+    """(Re)tag every stored passage from the text already in the bag. No downloads, no API calls."""
+    with _lock, _db() as con:
+        docs = [dict(r) for r in con.execute("SELECT * FROM docs WHERE status='active'")]
+        for d in docs:
+            rows = [(r["chunk_id"], r["page"], r["text"]) for r in con.execute("SELECT * FROM chunks WHERE doc_id=?", (d["doc_id"],))]
+            _tag(con, d, rows)
+        n = con.execute("SELECT COUNT(*) FROM tags").fetchone()[0]
+    rag.invalidate()
+    return {"documents": len(docs), "tag_links": n}
+
+
+def tag_counts(prefix: str | None = None, limit: int = 60) -> list[dict]:
+    with _db() as con:
+        q = "SELECT tag, COUNT(DISTINCT doc_id) docs, COUNT(chunk_id) passages FROM tags"
+        args: list = []
+        if prefix:
+            q += " WHERE tag LIKE ?"
+            args.append(prefix + ":%")
+        q += " GROUP BY tag ORDER BY docs DESC, passages DESC LIMIT ?"
+        return [dict(r) for r in con.execute(q, [*args, limit])]
+
+
+def doc_tag_map() -> dict[str, list[str]]:
+    with _db() as con:
+        out: dict[str, list[str]] = {}
+        for r in con.execute("SELECT doc_id, tag FROM tags WHERE chunk_id IS NULL"):
+            out.setdefault(r["doc_id"], []).append(r["tag"])
+        return out
+
+
+def chunk_tag_map() -> dict[str, list[str]]:
+    with _db() as con:
+        out: dict[str, list[str]] = {}
+        for r in con.execute("SELECT chunk_id, tag FROM tags WHERE chunk_id IS NOT NULL"):
+            out.setdefault(r["chunk_id"], []).append(r["tag"])
+        return out
 
 
 def load_chunks() -> list[dict]:
@@ -298,6 +354,8 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     if cmd == "import":
         print(import_existing())
+    elif cmd == "retag":
+        print(retag_all())
     elif cmd == "sync":
         print(sync(force="--force" in sys.argv))
     else:

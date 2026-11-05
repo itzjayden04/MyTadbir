@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from .. import llm
 from ..core.context import CaseContext
 from ..core.trace import bus
-from . import audit, rag
+from . import audit, rag, tagger
 
 
 class Finding(BaseModel):
@@ -35,12 +35,16 @@ def _cite(h: dict) -> dict:
 
 
 async def retrieve(ctx: CaseContext, query: str, *, dept: str | None, k: int = 5, kinds: set[str] | None = None) -> list[dict]:
-    hits = await asyncio.to_thread(rag.search, query, dept=dept, k=k, kinds=kinds)
+    hint = ctx.scratch.get("submodule_hint")
+    tags = tagger.query_tags(query, submodule=hint if hint else None)
+    hits, info = await asyncio.to_thread(rag.search, query, dept=dept, k=k, kinds=kinds, tags=tags, explain=True)
     cites = [_cite(h) for h in hits]
     audit.log("policy_rag_agent", "retrieved", {"query": query, "dept": dept, "citations": cites},
               case_id=ctx.case_id, thread_id=ctx.thread_id)
     await bus.emit(ctx.thread_id, ctx.case_id, "service", "policy_rag_agent", "retrieved",
-                   {"query": query, "citations": cites, "llm": {"model": "none (local BM25)", "tokens": 0}})
+                   {"query": query, "citations": cites, "tags": info["tags"],
+                    "searched": f"{info['candidates']} of {info['total']} passages" + (" (tag-filtered)" if info["narrowed"] else ""),
+                    "llm": {"model": "none (tag index + local BM25)", "tokens": 0}})
     return hits
 
 

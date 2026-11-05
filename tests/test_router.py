@@ -94,3 +94,50 @@ def test_jpj_scenario_pauses_for_citizen_then_runs_next_case_in_order():
         paid = [p for p in c.get("/api/payments").json() if p["case_id"] in {first["case_id"], second["case_id"]}]
         assert sorted(p["status"] for p in paid) == ["paid", "paid"]
         assert any(d["kind"] == "receipt" for d in c.get("/api/documents").json())
+
+
+def test_tag_fast_path_skips_the_llm(monkeypatch):
+    from app import llm
+    from app.router import classifier
+
+    monkeypatch.setattr(llm, "available", lambda: True)
+
+    def boom(self, *a, **k):
+        raise AssertionError("LLM should not be called for a clear request")
+
+    monkeypatch.setattr(classifier.LLMClassifier, "classify", boom)
+    d = asyncio.run(route("Saya nak renew lesen memandu dan bayar saman"))
+    assert d.classifier.startswith("tags") and len(d.intents) == 2
+
+
+def test_tagged_search_narrows_and_finds_bylaw():
+    from app.services import rag, tagger
+
+    hits, info = rag.search("lesen establisymen makanan", dept="local_gov",
+                            tags=tagger.query_tags("lesen establisymen makanan", submodule="licence_precheck"), explain=True)
+    if info["total"]:  # corpus present on this machine
+        assert info["narrowed"] and info["candidates"] < info["total"]
+        assert any("Food Establishment" in h["title_en"] for h in hits)
+
+
+def _client():
+    c = TestClient(app)
+    c.__enter__()
+    tok = c.post("/api/auth/login", json={"username": "aisyah", "password": "Demo@2026"}).json()["token"]
+    c.headers["Authorization"] = f"Bearer {tok}"
+    return c
+
+
+def test_only_text_images_and_files_are_accepted():
+    c = _client()
+    r = c.post("/api/requests", data={"text": "hello"}, files={"files": ("song.mp3", b"ID3...", "audio/mpeg")})
+    assert r.status_code == 415 and "bm" in r.json()["detail"]
+    r = c.post("/api/requests", data={"text": ""})
+    assert r.status_code == 400
+
+
+def test_suggestions_follow_language():
+    c = _client()
+    bm = c.get("/api/suggestions", params={"lang": "bm"}).json()
+    en = c.get("/api/suggestions", params={"lang": "en"}).json()
+    assert len(bm) == len(en) >= 4 and bm[0]["label"] != en[0]["label"]

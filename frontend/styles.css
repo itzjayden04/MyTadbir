@@ -1,7 +1,7 @@
 /* MyTadbir: a government control plane. Sidebar | workspace | live agent trace. */
 :root{
   --bg:#eef1f5; --surface:#ffffff; --surface-2:#f6f8fb; --ink:#12213a; --muted:#5a6a7f; --line:#d5dde7;
-  --accent:#0b6e8a; --accent-ink:#ffffff; --accent-soft:rgba(11,110,138,.10);
+  --accent:#09090b; --accent-ink:#ffffff; --accent-soft:rgba(9,9,11,.06);
   --agent:#c98208; --agent-soft:rgba(201,130,8,.14);
   --good:#2e7d4f; --warn:#b7791f; --bad:#c0392b; --good-soft:rgba(46,125,79,.12); --warn-soft:rgba(183,121,31,.14); --bad-soft:rgba(192,57,43,.12);
   --side:#0f1d33; --side-ink:#dbe4f0; --side-muted:#8ea0b8; --side-line:#22334f; --side-hover:#18294a;
@@ -10,7 +10,7 @@
 }
 :root[data-theme="dark"]{
   --bg:#0b1119; --surface:#131c28; --surface-2:#182333; --ink:#e3eaf3; --muted:#93a3b8; --line:#26354a;
-  --accent:#4cb3d2; --accent-ink:#06131c; --accent-soft:rgba(76,179,210,.14);
+  --accent:#fafafa; --accent-ink:#09090b; --accent-soft:rgba(250,250,250,.10);
   --agent:#f0b13e; --agent-soft:rgba(240,177,62,.16);
   --good:#5cc489; --warn:#e3b04b; --bad:#ef7565; --good-soft:rgba(92,196,137,.14); --warn-soft:rgba(227,176,75,.14); --bad-soft:rgba(239,117,101,.14);
   --side:#070d15; --side-ink:#dbe4f0; --side-muted:#7f91a8; --side-line:#18263a; --side-hover:#122036;
@@ -36,7 +36,7 @@ a{color:var(--accent)}
 .brand-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#0b6e8a,#c98208);display:grid;place-items:center;font:700 14px var(--f-display);color:#fff}
 .brand b{font:700 17px var(--f-display);letter-spacing:-.01em}
 .brand small{display:block;font-size:11px;color:var(--side-muted);letter-spacing:.06em;text-transform:uppercase}
-.new-btn{margin:6px 14px 10px;padding:10px 12px;border-radius:var(--r);border:0;background:var(--accent);color:#fff;font-weight:600;display:flex;gap:8px;align-items:center;justify-content:center}
+.new-btn{margin:6px 14px 10px;padding:10px 12px;border-radius:var(--r);border:0;background:#fff;color:#09090b;font-weight:600;display:flex;gap:8px;align-items:center;justify-content:center}
 .side-scroll{overflow:auto;flex:1;padding:0 8px 12px}
 .grp{margin-top:10px}
 .grp-h{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;color:var(--side-muted);font:600 11px var(--f-body);letter-spacing:.09em;text-transform:uppercase;padding:6px 8px}
@@ -237,3 +237,19 @@ tr.click:hover td{background:var(--surface-2)}
   #map{height:calc(100vh - 150px)}
 }
 @media (prefers-reduced-motion:reduce){.trace,.side{transition:none}}
+
+/* ---------- login (simple, centred) */
+.login{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;background:var(--bg)}
+.login-top{position:fixed;top:16px;right:16px}
+.login-card{width:100%;max-width:380px}
+.login-brand{display:flex;align-items:center;gap:10px;justify-content:center}
+.login-brand b{font:700 24px var(--f-display);letter-spacing:-.01em}
+.login-brand .brand-mark{background:var(--ink);color:var(--surface);border-radius:6px}
+.login-sub{text-align:center;margin:8px 0 26px;font-size:14.5px}
+.login-btn{width:100%;padding:11px;justify-content:center}
+.login-foot{position:fixed;bottom:14px;font-size:12px}
+/* ---------- section chevrons */
+.chev{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.chev.open{transform:rotate(180deg)}
+.filechip{display:inline-flex;align-items:center;height:56px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:12.5px;max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}

@@ -18,13 +18,14 @@ from sqlalchemy import func, select
 
 from ..core.trace import bus
 from ..db.models import Case, SessionLocal, Thread
-from ..services import audit
+from ..services import audit, tagger
 from .classifier import KeywordClassifier, get_classifier
 from .schemas import ClassifierOutput, RoutedIntent, RoutingDecision
 
 log = logging.getLogger(__name__)
 
 ROUTE_THRESHOLD = 0.75   # at or above: route normally
+FAST_PATH_CONFIDENCE = 0.85  # tag match strong enough to skip the LLM router
 VERIFY_THRESHOLD = 0.50  # between the two: route, but flag for officer verification
 # below VERIFY_THRESHOLD with nothing else to go on: ask one clarifying question
 
@@ -61,10 +62,17 @@ def _order(intents):
     return items, notes
 
 
-async def route(text: str, *, image_paths: list[str] | None = None, identity: dict | None = None,
+async def route(text: str, *, image_paths: list[str] | None = None, doc_paths: list[str] | None = None, identity: dict | None = None,
                 thread_id: str | None = None, citizen_ref: str | None = None) -> RoutingDecision:
     image_paths = image_paths or []
     clf = get_classifier()
+    # Tag fast path: a clear text-only request whose tags already identify the service is routed
+    # from the tag index, with no model call. Anything vague, bundled oddly or with a photo goes to the LLM.
+    if clf.name != "keyword" and not image_paths:
+        quick = KeywordClassifier().classify(text)
+        if quick.intents and all(g.confidence >= FAST_PATH_CONFIDENCE for g in quick.intents):
+            clf = KeywordClassifier()
+            clf.name = "tags (fast path, 0 tokens)"
     try:
         out: ClassifierOutput = await asyncio.to_thread(clf.classify, text, image_paths)
     except Exception as exc:  # noqa: BLE001
@@ -105,10 +113,12 @@ async def route(text: str, *, image_paths: list[str] | None = None, identity: di
             verify = g.confidence < ROUTE_THRESHOLD
             context = {
                 "identity": identity or {},
-                "evidence": [{"kind": "photo", "path": p} for p in image_paths] + [{"kind": "text", "text": text}],
+                "evidence": [{"kind": "photo", "path": p} for p in image_paths] + [{"kind": "document", "path": p} for p in (doc_paths or [])]
+                            + [{"kind": "text", "text": text}],
                 "history": [{"role": "citizen", "text": text}],
                 "prior_cases": prior,
                 "submodule_hint": g.submodule,
+                "tags": sorted(tagger.query_tags(g.text, submodule=g.submodule) | {f"dept:{g.department}"}),
                 "secondary_department": g.secondary_department,
                 "linked_cases": [],  # filled below
             }

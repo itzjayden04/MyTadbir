@@ -86,7 +86,7 @@ def main() -> int:
             if e["doc_id"] in old:
                 out.append(old[e["doc_id"]])
             continue
-        ext = Path(urllib.parse.urlparse(e["url"]).path).suffix.lower() or ".pdf"
+        ext = ".html" if e.get("kind") == "webpage" else (Path(urllib.parse.urlparse(e["url"]).path).suffix.lower() or ".pdf")
         dest = RAW / e["dept"] / f"{e['doc_id']}{ext}"
         if dest.exists() and not args.force and e["doc_id"] in old:
             out.append(old[e["doc_id"]])
@@ -97,7 +97,7 @@ def main() -> int:
             failed.append((e["doc_id"], str(exc)))
             print(f"FAIL {e['doc_id']}: {exc}", file=sys.stderr)
             continue
-        if "html" in ctype.lower():
+        if "html" in ctype.lower() and e.get("kind") != "webpage":
             failed.append((e["doc_id"], f"got HTML, not a document ({ctype})"))
             dest.unlink(missing_ok=True)
             continue

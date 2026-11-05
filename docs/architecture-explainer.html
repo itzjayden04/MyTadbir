@@ -1,0 +1,333 @@
+<title>MyTadbir Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: control bar, then a wide stage (diagram + live caption), then the step log. Built for screen recording at 1080p. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#13233a; --muted:#5b6b80; --line:#c9d2de;
+  --accent:#0b6e8a; --accent-soft:rgba(11,110,138,.10); --token:#d18a06; --token-soft:rgba(209,138,6,.16);
+  --done:#2f7d4f; --dim:#e7ebf1;
+  --f-display:"Sora","Segoe UI",system-ui,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e141c; --surface:#161f2a; --ink:#e4eaf2; --muted:#93a3b8; --line:#2c3a4b;
+  --accent:#4fb6d4; --accent-soft:rgba(79,182,212,.14); --token:#f2b544; --token-soft:rgba(242,181,68,.18);
+  --done:#5cc48a; --dim:#1d2834; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141c; --surface:#161f2a; --ink:#e4eaf2; --muted:#93a3b8; --line:#2c3a4b;
+  --accent:#4fb6d4; --accent-soft:rgba(79,182,212,.14); --token:#f2b544; --token-soft:rgba(242,181,68,.18);
+  --done:#5cc48a; --dim:#1d2834; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1320px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(20px,2.4vw,28px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 small{display:block;font-family:var(--f-body);font-weight:400;font-size:15px;color:var(--muted);letter-spacing:0}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select{font:600 14px var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover,select:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,.lang:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.lang button{border:0;border-radius:0;padding:6px 12px;background:transparent}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.diagram{overflow-x:auto}
+svg{display:block;width:100%;min-width:900px;height:auto}
+.caption{border-top:1px solid var(--line);padding:14px 20px;display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:baseline;min-height:84px}
+.caption .num{font:600 13px var(--f-mono);color:var(--token)}
+.caption .layer{font:600 12px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.caption .text{grid-column:1/-1;font-family:var(--f-display);font-weight:500;font-size:clamp(17px,1.7vw,21px);line-height:1.4;min-width:0}
+.log{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 0;margin:0;list-style:none;max-height:300px;overflow:auto}
+.log li{display:grid;grid-template-columns:44px 150px 1fr;gap:12px;padding:6px 16px;font-size:14px;color:var(--muted)}
+.log li.on{color:var(--ink);background:var(--token-soft)}
+.log li.past{color:var(--ink)}
+.log .n{font:500 12px var(--f-mono)}
+.log .l{font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:640px){.log li{grid-template-columns:32px 1fr}.log .l{display:none}}
+.note{font-size:13px;color:var(--muted);margin:0}
+/* svg parts */
+.box{fill:var(--surface);stroke:var(--line);stroke-width:1.25}
+.box.on{fill:var(--token-soft);stroke:var(--token);stroke-width:2}
+.box.past{stroke:var(--accent)}
+.chip{fill:var(--dim);stroke:none}
+.chip.owner{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.chip.on{fill:var(--token-soft);stroke:var(--token);stroke-width:2}
+.chip.past{fill:var(--accent-soft)}
+.t{fill:var(--ink);font-family:var(--f-body);font-size:13px}
+.th{fill:var(--ink);font-family:var(--f-display);font-weight:600;font-size:15px}
+.ts{fill:var(--muted);font-family:var(--f-body);font-size:12px}
+.tm{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.colhead{fill:var(--muted);font-family:var(--f-body);font-weight:600;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase}
+.edge{fill:none;stroke:var(--line);stroke-width:1.5}
+.edge.handoff{stroke:var(--accent);stroke-dasharray:5 5}
+.arrow{fill:var(--line)}
+.arrow-a{fill:var(--accent)}
+.dimtext{fill:var(--muted);opacity:.6}
+#token{fill:var(--token);transition:transform .6s cubic-bezier(.45,0,.2,1)}
+#tokenHalo{fill:var(--token);opacity:.25;transition:transform .6s cubic-bezier(.45,0,.2,1)}
+@media (prefers-reduced-motion:reduce){#token,#tokenHalo{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1 id="title">How MyTadbir handles a case<small id="subtitle">One router, one owning department, sequential handoffs, one audit ledger</small></h1>
+    <div class="controls">
+      <label for="scenario" class="ts" style="font-size:14px" id="scenarioLabel">Scenario</label>
+      <select id="scenario"></select>
+      <button id="prev" type="button">‹</button>
+      <button id="play" type="button" class="primary">Play</button>
+      <button id="next" type="button">›</button>
+      <button id="reset" type="button">Reset</button>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" id="lang-en" aria-pressed="true">EN</button>
+        <button type="button" id="lang-bm" aria-pressed="false">BM</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="stage">
+    <div class="diagram"><svg id="svg" viewBox="0 0 1240 610" role="img" aria-labelledby="title"></svg></div>
+    <div class="caption" aria-live="polite">
+      <span class="num" id="capNum">00</span><span class="layer" id="capLayer"></span>
+      <div class="text" id="capText"></div>
+    </div>
+  </section>
+
+  <ol class="log" id="log"></ol>
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+const UI = {
+  en:{title:"How MyTadbir handles a case",subtitle:"One router, one owning department, sequential handoffs, one audit ledger",scenario:"Scenario",play:"Play",pause:"Pause",reset:"Reset",
+    ready:"Press Play, or use › to step through.",
+    note:"Illustrative run. Case IDs, ticket numbers and API responses are examples; government APIs are mocked in the demo. BM labels are working drafts.",
+    citizen:["Citizen","photo · audio · document · text"],router:["Intent Router","classifies only, never executes"],caseid:["Case ID + context","identity · evidence · history"],
+    cm:["Case Manager","one case at a time, in order"],always:["Always-on modules","reasoning · next steps"],result:["Result","one Case ID, thread, ledger"],
+    depts:"Department main modules",subs:"Sub-modules of the owner",svcs:"Shared agent services",handoff:"sequential handoff, same Case ID",
+    svc:{rag:"Policy RAG",multimodal:"Multimodal inspection",execution:"Execution & tools",identity:"Identity (MyKad)",notification:"Notification",audit:"Audit ledger"},
+    layer:{citizen:"Citizen",router:"Intent Router",caseid:"Intent Router",cm:"Case Manager",dept:"Department",sub:"Sub-module",svc:"Shared service",always:"Always-on",result:"Result"}},
+  bm:{title:"Cara MyTadbir mengendalikan kes",subtitle:"Satu penghala, satu jabatan pemilik, serahan berurutan, satu lejar audit",scenario:"Senario",play:"Main",pause:"Jeda",reset:"Semula",
+    ready:"Tekan Main, atau guna › untuk melangkah.",
+    note:"Contoh larian. ID kes, nombor tiket dan respons API adalah contoh; API kerajaan disimulasikan dalam demo. Label BM ialah draf kerja.",
+    citizen:["Rakyat","foto · audio · dokumen · teks"],router:["Penghala Niat","mengelas sahaja, tidak melaksana"],caseid:["ID Kes + konteks","identiti · bukti · sejarah"],
+    cm:["Pengurus Kes","satu kes demi satu kes"],always:["Modul sentiasa-aktif","penaakulan · langkah seterusnya"],result:["Keputusan","satu ID Kes, urutan, lejar"],
+    depts:"Modul utama jabatan",subs:"Sub-modul jabatan pemilik",svcs:"Perkhidmatan ejen dikongsi",handoff:"serahan berurutan, ID Kes sama",
+    svc:{rag:"RAG Polisi",multimodal:"Pemeriksaan multimodal",execution:"Pelaksanaan & alatan",identity:"Identiti (MyKad)",notification:"Notifikasi",audit:"Lejar audit"},
+    layer:{citizen:"Rakyat",router:"Penghala Niat",caseid:"Penghala Niat",cm:"Pengurus Kes",dept:"Jabatan",sub:"Sub-modul",svc:"Perkhidmatan dikongsi",always:"Sentiasa-aktif",result:"Keputusan"}}
+};
+
+const DEPTS = [
+ ["health","Health","Kesihatan",[["emergency_triage","Emergency triage & bed dispatcher","Triaj kecemasan & penghantar katil"],["appointment_referral","Appointment & referral coordinator","Penyelaras temu janji & rujukan"],["clinic_queue","Clinic queue optimizer","Pengoptimum giliran klinik"],["contact_tracer","Contact tracer","Pengesan kontak"],["pharmacy_refill","Pharmacy refill dispatcher","Penghantar ulangan ubat farmasi"],["discharge_homecare","Discharge & home-care coordinator","Penyelaras discaj & penjagaan di rumah"],["mc_document","MC document assistant","Pembantu dokumen sijil cuti sakit"],["health_inspection","Health inspection scheduler","Penjadual pemeriksaan kesihatan"]]],
+ ["education","Education","Pendidikan",[["enrolment_transfer","Enrolment & transfer assistant","Pembantu pendaftaran & pertukaran"],["scholarship_prescreen","Scholarship pre-screener","Pra-saringan biasiswa"],["dropout_risk","Dropout risk responder","Responden risiko keciciran"],["school_infra","School infrastructure dispatcher","Penghantar infrastruktur sekolah"],["substitute_teacher","Substitute teacher coordinator","Penyelaras guru ganti"],["exam_document","Exam document assistant","Pembantu dokumen peperiksaan"],["special_needs","Special needs support coordinator","Penyelaras sokongan keperluan khas"]]],
+ ["local_gov","Local Government","Kerajaan Tempatan",[["incident_dispatcher","Incident dispatcher (Aduan Civil)","Penghantar insiden (Aduan Sivil)"],["licence_precheck","Licence & permit pre-checker","Pra-semak lesen & permit"],["facility_booking","Facility booking manager","Pengurus tempahan fasiliti"],["waste_scheduler","Illegal dumping & waste scheduler","Penjadual pembuangan haram & sisa"],["streetlight_road","Streetlight & road defect dispatcher","Penghantar kerosakan lampu jalan & jalan raya"],["hawker_licence","Hawker licence assistant","Pembantu lesen penjaja"],["renovation_permit","Renovation permit pre-screen","Pra-saringan permit pengubahsuaian"],["noise_pest","Noise & pest enforcement dispatcher","Penghantar penguatkuasaan bunyi & perosak"]]],
+ ["immigration","Immigration","Imigresen",[["passport_renewal","Passport renewal assistant","Pembantu pembaharuan pasport"],["visa_eligibility","Visa eligibility pre-checker","Pra-semak kelayakan visa"],["foreign_worker","Foreign worker compliance monitor","Pemantau pematuhan pekerja asing"],["border_declaration","Border entry declaration assistant","Pembantu pengisytiharan kemasukan sempadan"],["long_term_pass","Long-term pass renewal coordinator","Penyelaras pembaharuan pas jangka panjang"]]],
+ ["road_transport","Road Transport","Pengangkutan Jalan",[["licence_renewal","Driving licence renewal","Pembaharuan lesen memandu"],["roadtax_insurance","Road tax & insurance coordinator","Penyelaras cukai jalan & insurans"],["summons_payment","Summons payment agent","Ejen pembayaran saman"],["puspakom","PUSPAKOM inspection scheduler","Penjadual pemeriksaan PUSPAKOM"],["driving_test","Driving test booking agent","Ejen tempahan ujian memandu"]]],
+ ["inland_revenue","Inland Revenue","Hasil Dalam Negeri",[["tax_filing","Individual tax filing assistant","Pembantu pemfailan cukai individu"],["audit_precheck","Audit document pre-checker","Pra-semak dokumen audit"],["refund_dispute","Refund & dispute agent","Ejen bayaran balik & pertikaian"],["business_tax_reg","Business tax registration assistant","Pembantu pendaftaran cukai perniagaan"]]],
+ ["social_welfare","Social Welfare","Kebajikan Masyarakat",[["aid_eligibility","Aid eligibility pre-checker","Pra-semak kelayakan bantuan"],["child_protection","Child protection responder","Responden perlindungan kanak-kanak"],["elderly_oku","Elderly & OKU assistance coordinator","Penyelaras bantuan warga emas & OKU"],["disaster_relief","Disaster relief dispatch coordinator","Penyelaras penghantaran bantuan bencana"]]],
+ ["police_home","Police / Home Affairs","Polis / Dalam Negeri",[["police_report","Police report pre-filler & router","Pra-isi & penghala laporan polis"],["lost_document","Lost document replacement assistant","Pembantu penggantian dokumen hilang"],["community_patrol","Community patrol dispatcher","Penghantar rondaan komuniti"],["domestic_violence","Domestic violence emergency responder","Responden kecemasan keganasan rumah tangga"]]],
+ ["agri_env","Agriculture & Environment","Pertanian & Alam Sekitar",[["agri_subsidy","Agriculture subsidy pre-checker","Pra-semak subsidi pertanian"],["pollution_complaint","Pollution complaint dispatcher","Penghantar aduan pencemaran"],["flood_landslide","Flood & landslide early warning responder","Responden amaran awal banjir & tanah runtuh"]]],
+ ["cross_agency","Cross-Agency Services","Perkhidmatan Rentas Agensi",[["utility_outage","Utility outage coordinator","Penyelaras gangguan utiliti"],["doc_request_verify","Government document request & verification agent","Ejen permohonan & pengesahan dokumen kerajaan"]]]
+];
+const SVCS = ["rag","multimodal","execution","identity","notification","audit"];
+
+const S = (at,en,bm)=>({at,en,bm});
+const SCENARIOS = {
+ aduan:{en:"A · Aduan Civil: clogged drain",bm:"A · Aduan Sivil: longkang tersumbat",steps:[
+  S("citizen","Citizen uploads a photo of a clogged drain beside a school and types: “Longkang tersumbat depan sekolah, air dah naik.”","Rakyat memuat naik foto longkang tersumbat di tepi sekolah dan menaip: “Longkang tersumbat depan sekolah, air dah naik.”"),
+  S("router","Intent Router finds one intent, drain blockage, and maps it to Local Government. Confidence 0.94 is above the threshold, so no clarifying question is needed.","Penghala Niat menemui satu niat, longkang tersumbat, dan memetakannya ke Kerajaan Tempatan. Keyakinan 0.94 melepasi ambang, jadi tiada soalan penjelasan diperlukan."),
+  S("caseid","Case ID MT-26-000123 is created with a context bundle: identity, photo, message and prior cases.","ID Kes MT-26-000123 dicipta bersama himpunan konteks: identiti, foto, mesej dan kes terdahulu."),
+  S("cm","Case Manager hands the case to exactly one owner, the Local Government main module.","Pengurus Kes menyerahkan kes kepada satu pemilik sahaja, iaitu modul utama Kerajaan Tempatan."),
+  S({dept:"local_gov"},"Local Government owns the case. It chooses which of its own 8 sub-modules to call.","Kerajaan Tempatan memiliki kes ini. Ia memilih sub-modul sendiri yang perlu dipanggil daripada 8 yang ada."),
+  S({sub:"incident_dispatcher"},"Incident dispatcher plans its steps: inspect, locate, check weather, apply by-laws, create ticket, dispatch.","Penghantar insiden merancang langkahnya: periksa, kesan lokasi, semak cuaca, guna undang-undang kecil, cipta tiket, hantar."),
+  S({svc:"multimodal"},"Multimodal inspection: blockage visible, standing water near the school gate, so severity is high. GPS is read from the photo.","Pemeriksaan multimodal: sumbatan jelas, air bertakung dekat pagar sekolah, jadi keterukan tinggi. GPS dibaca daripada foto."),
+  S({svc:"execution"},"Execution agent calls the weather forecast API for that location: heavy rain is expected this afternoon.","Ejen pelaksanaan memanggil API ramalan cuaca untuk lokasi itu: hujan lebat dijangka petang ini."),
+  S({svc:"rag"},"Policy RAG retrieves the council's drainage and priority rules. Each rule shows the document and clause it came from.","RAG Polisi mendapatkan peraturan saliran dan keutamaan majlis. Setiap peraturan menunjukkan dokumen dan fasal sumbernya."),
+  S({svc:"execution"},"Execution agent generates work ticket WT-0457 as a PDF and dispatches the nearest contractor through the contractor API.","Ejen pelaksanaan menjana tiket kerja WT-0457 dalam PDF dan menghantar kontraktor terdekat melalui API kontraktor."),
+  S({svc:"audit"},"Audit logger writes every action to the hash-chained ledger under MT-26-000123.","Pencatat audit merekod setiap tindakan dalam lejar berantai hash di bawah MT-26-000123."),
+  S("cm","Heavy rain plus a blocked drain means flood risk. Local Government requests a sequential handoff, and the Case Manager queues it with the same Case ID.","Hujan lebat dan longkang tersumbat bermaksud risiko banjir. Kerajaan Tempatan memohon serahan berurutan, dan Pengurus Kes menjadualkannya dengan ID Kes yang sama."),
+  S({dept:"agri_env"},"Agriculture & Environment takes over only after Local Government has finished. Nothing runs in parallel.","Pertanian & Alam Sekitar mengambil alih hanya selepas Kerajaan Tempatan selesai. Tiada apa-apa berjalan serentak."),
+  S({sub:"flood_landslide"},"Flood & landslide early warning responder puts the location on flood watch.","Responden amaran awal banjir & tanah runtuh meletakkan lokasi itu dalam pemantauan banjir."),
+  S("always","Always-on modules run once for the whole case: a reasoning summary, and next steps for the citizen and the officer.","Modul sentiasa-aktif dijalankan sekali untuk keseluruhan kes: ringkasan penaakulan, serta langkah seterusnya untuk rakyat dan pegawai."),
+  S({svc:"notification"},"Notification agent sends the citizen one message in their language, with the ticket number and status link.","Ejen notifikasi menghantar satu mesej kepada rakyat dalam bahasa mereka, bersama nombor tiket dan pautan status."),
+  S("result","Done. One Case ID, one citizen thread, one audit ledger, and two departments that worked in sequence.","Selesai. Satu ID Kes, satu urutan rakyat, satu lejar audit, dan dua jabatan yang bekerja secara berurutan.")
+ ]},
+ jpj:{en:"B · Licence renewal + summons",bm:"B · Pembaharuan lesen + saman",steps:[
+  S("citizen","Citizen types: “Saya nak renew lesen memandu dan bayar saman.” (I want to renew my driving licence and pay my summons.)","Rakyat menaip: “Saya nak renew lesen memandu dan bayar saman.”"),
+  S("router","Intent Router detects two intents in one message, summons payment and licence renewal, and maps both to Road Transport (JPJ).","Penghala Niat mengesan dua niat dalam satu mesej, bayaran saman dan pembaharuan lesen, dan memetakan kedua-duanya ke Pengangkutan Jalan (JPJ)."),
+  S("caseid","Two Case IDs, MT-26-000201 and MT-26-000202, are linked under one thread. The summons runs first because an unpaid summons may block renewal (assumption, to check against JPJ rules).","Dua ID Kes, MT-26-000201 dan MT-26-000202, dipautkan di bawah satu urutan. Saman diproses dahulu kerana saman tertunggak mungkin menghalang pembaharuan (andaian, perlu disemak dengan peraturan JPJ)."),
+  S("cm","Case Manager runs case 201 first. Case 202 waits in the queue.","Pengurus Kes menjalankan kes 201 dahulu. Kes 202 menunggu giliran."),
+  S({dept:"road_transport"},"Road Transport owns case 201 and picks one of its 5 sub-modules.","Pengangkutan Jalan memiliki kes 201 dan memilih satu daripada 5 sub-modulnya."),
+  S({sub:"summons_payment"},"Summons payment agent looks up outstanding summons for this citizen.","Ejen pembayaran saman menyemak saman tertunggak untuk rakyat ini."),
+  S({svc:"identity"},"Identity agent verifies the MyKad once. Every later case in this thread reuses the result.","Ejen identiti mengesahkan MyKad sekali. Semua kes seterusnya dalam urutan ini menggunakan semula keputusan itu."),
+  S({svc:"execution"},"Execution agent queries the JPJ summons API and finds 1 outstanding summons. Payment waits for the citizen to confirm the amount.","Ejen pelaksanaan menyemak API saman JPJ dan menemui 1 saman tertunggak. Bayaran menunggu rakyat mengesahkan jumlahnya."),
+  S({svc:"execution"},"Citizen confirms. The payment is posted and a receipt is generated.","Rakyat mengesahkan. Bayaran direkodkan dan resit dijana."),
+  S({svc:"audit"},"Audit logger records the payment under MT-26-000201.","Pencatat audit merekod bayaran di bawah MT-26-000201."),
+  S("cm","Case 201 is closed. Case Manager starts case 202 with the same context bundle, so there's no second identity check.","Kes 201 ditutup. Pengurus Kes memulakan kes 202 dengan himpunan konteks yang sama, jadi tiada semakan identiti kali kedua."),
+  S({dept:"road_transport"},"Road Transport owns case 202.","Pengangkutan Jalan memiliki kes 202."),
+  S({sub:"licence_renewal"},"Driving licence renewal sub-module takes the case.","Sub-modul pembaharuan lesen memandu mengambil kes ini."),
+  S({svc:"rag"},"Policy RAG retrieves the renewal requirements, each cited to its source document.","RAG Polisi mendapatkan syarat pembaharuan, setiap satu dengan dokumen sumbernya."),
+  S({svc:"execution"},"Execution agent submits the renewal through the JPJ API, and the digital licence is issued.","Ejen pelaksanaan menghantar pembaharuan melalui API JPJ, dan lesen digital dikeluarkan."),
+  S({svc:"audit"},"Audit logger records the renewal under MT-26-000202.","Pencatat audit merekod pembaharuan di bawah MT-26-000202."),
+  S("always","Always-on modules suggest next steps, for example a reminder before the road tax expires.","Modul sentiasa-aktif mencadangkan langkah seterusnya, contohnya peringatan sebelum cukai jalan tamat."),
+  S({svc:"notification"},"Notification agent sends one message covering both cases, not two separate alerts.","Ejen notifikasi menghantar satu mesej untuk kedua-dua kes, bukan dua makluman berasingan."),
+  S("result","Done. Two Case IDs in one thread and one ledger, run one after the other.","Selesai. Dua ID Kes dalam satu urutan dan satu lejar, dijalankan satu demi satu.")
+ ]}
+};
+
+// ---- geometry
+const G = {
+  citizen:{x:30,y:40,w:180,h:96}, router:{x:250,y:40,w:190,h:96}, caseid:{x:250,y:186,w:190,h:96},
+  cm:{x:480,y:40,w:190,h:96}, always:{x:480,y:186,w:190,h:96}, result:{x:30,y:186,w:180,h:96},
+  deptX:710, deptW:200, chipY:52, chipH:30, chipGap:6, subX:950, subW:270, svcY:452
+};
+const svcW = (1210-30-32-5*16)/6;
+const center = b => [b.x+b.w/2, b.y+b.h/2];
+const deptCenter = i => [G.deptX+G.deptW/2, G.chipY+i*(G.chipH+G.chipGap)+G.chipH/2];
+const subCenter = i => [G.subX+G.subW/2, G.chipY+i*(G.chipH+G.chipGap)+G.chipH/2];
+const svcCenter = i => [46+i*(svcW+16)+svcW/2, G.svcY+40+30];
+
+let lang = "en", scen = "aduan", idx = -1, timer = null;
+try{ const l = localStorage.getItem("mt-lang"); if(l==="bm"||l==="en") lang=l; }catch(e){}
+
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs={}, text) => { const n=document.createElementNS(NS,tag); for(const k in attrs) n.setAttribute(k,attrs[k]); if(text!=null) n.textContent=text; return n; };
+
+function stateAt(i){
+  const steps = SCENARIOS[scen].steps; let dept=null, sub=null; const pastDepts=new Set(), pastSubs=new Set(), pastSvcs=new Set(), pastBoxes=new Set();
+  for(let k=0;k<=i;k++){
+    const a = steps[k].at;
+    if(a.dept){ if(dept && dept!==a.dept) pastDepts.add(dept); if(dept!==a.dept) sub=null; dept=a.dept; }
+    else if(a.sub){ if(sub) pastSubs.add(sub); sub=a.sub; }
+    else if(a.svc){ if(k<i) pastSvcs.add(a.svc); }
+    else if(k<i) pastBoxes.add(a);
+  }
+  return {dept, sub, pastDepts, pastSubs, pastSvcs, pastBoxes, cur: i>=0 ? steps[i].at : null};
+}
+
+function render(){
+  const T = UI[lang], svg = document.getElementById("svg"), st = stateAt(idx);
+  svg.textContent = "";
+  const defs = el("defs");
+  const mk = (id,cls)=>{ const m=el("marker",{id,viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"7",markerHeight:"7",orient:"auto-start-reverse"}); m.appendChild(el("path",{d:"M0 0L10 5L0 10z",class:cls})); return m; };
+  defs.append(mk("ah","arrow"), mk("ahA","arrow-a")); svg.appendChild(defs);
+
+  // edges
+  const edges = [
+    "M210 88H248","M440 88H478","M670 88H708","M345 136V184","M575 136V184","M120 450V284","M120 186V138",
+    `M${G.deptX+G.deptW} 88H${G.subX-2}`,`M${G.deptX+G.deptW/2} 412V450`,`M${G.subX+G.subW/2} 412V450`
+  ];
+  edges.forEach(d=>svg.appendChild(el("path",{d,class:"edge","marker-end":"url(#ah)"})));
+  svg.appendChild(el("path",{d:`M${G.deptX} 300C${G.deptX-30} 300 ${G.deptX-30} 118 ${G.cm.x+G.cm.w+2} 118`,class:"edge handoff","marker-end":"url(#ahA)"}));
+  svg.appendChild(el("text",{x:G.deptX-8,y:322,"text-anchor":"end",class:"ts"},T.handoff));
+
+  // boxes
+  for(const key of ["citizen","router","caseid","cm","always","result"]){
+    const b=G[key], on = st.cur===key, past = st.pastBoxes.has(key);
+    svg.appendChild(el("rect",{x:b.x,y:b.y,width:b.w,height:b.h,rx:8,class:"box"+(on?" on":past?" past":"")}));
+    svg.appendChild(el("text",{x:b.x+b.w/2,y:b.y+42,"text-anchor":"middle",class:"th"},T[key][0]));
+    svg.appendChild(el("text",{x:b.x+b.w/2,y:b.y+64,"text-anchor":"middle",class:"ts"},T[key][1]));
+  }
+
+  // department column
+  svg.appendChild(el("text",{x:G.deptX,y:38,class:"colhead"},T.depts));
+  DEPTS.forEach((d,i)=>{
+    const y = G.chipY+i*(G.chipH+G.chipGap), isOwner = st.dept===d[0], on = st.cur && st.cur.dept===d[0], past = st.pastDepts.has(d[0]);
+    svg.appendChild(el("rect",{x:G.deptX,y,width:G.deptW,height:G.chipH,rx:6,class:"chip"+(on?" on":isOwner?" owner":past?" past":"")}));
+    svg.appendChild(el("text",{x:G.deptX+12,y:y+20,class:"t"+(st.dept && !isOwner && !past?" dimtext":"")},lang==="en"?d[1]:d[2]));
+  });
+
+  // sub-module column for the current owner
+  svg.appendChild(el("text",{x:G.subX,y:38,class:"colhead"},T.subs));
+  const owner = DEPTS.find(d=>d[0]===st.dept);
+  if(owner){
+    owner[3].forEach((s,i)=>{
+      const y = G.chipY+i*(G.chipH+G.chipGap), on = st.sub===s[0], past = st.pastSubs.has(s[0]);
+      svg.appendChild(el("rect",{x:G.subX,y,width:G.subW,height:G.chipH,rx:6,class:"chip"+(on && st.cur && st.cur.sub===s[0]?" on":on?" owner":past?" past":"")}));
+      const t = el("text",{x:G.subX+12,y:y+20,class:"t"+(!on&&!past?" dimtext":""),style:"font-size:11.5px"},lang==="en"?s[1]:s[2]);
+      svg.appendChild(t);
+    });
+  } else {
+    svg.appendChild(el("text",{x:G.subX,y:G.chipY+20,class:"ts"},lang==="en"?"Appears once a department owns the case":"Dipaparkan apabila jabatan memiliki kes"));
+  }
+
+  // shared services band
+  svg.appendChild(el("rect",{x:30,y:G.svcY,width:1180,height:140,rx:10,class:"box"}));
+  svg.appendChild(el("text",{x:46,y:G.svcY+26,class:"colhead"},T.svcs));
+  SVCS.forEach((k,i)=>{
+    const x = 46+i*(svcW+16), on = st.cur && st.cur.svc===k, past = st.pastSvcs.has(k);
+    svg.appendChild(el("rect",{x,y:G.svcY+40,width:svcW,height:60,rx:8,class:"chip"+(on?" on":past?" past":"")}));
+    svg.appendChild(el("text",{x:x+svcW/2,y:G.svcY+75,"text-anchor":"middle",class:"t",style:"font-weight:600"},T.svc[k]));
+  });
+  svg.appendChild(el("text",{x:46,y:G.svcY+124,class:"ts"},lang==="en"?"Called by the owning department through its sub-modules. Never rebuilt per department.":"Dipanggil oleh jabatan pemilik melalui sub-modulnya. Tidak dibina semula bagi setiap jabatan."));
+
+  // token
+  let pos = [120,88];
+  if(st.cur){
+    const a = st.cur;
+    if(typeof a==="string") pos = center(G[a]);
+    else if(a.dept) pos = deptCenter(DEPTS.findIndex(d=>d[0]===a.dept));
+    else if(a.sub) pos = subCenter(owner[3].findIndex(s=>s[0]===a.sub));
+    else if(a.svc) pos = svcCenter(SVCS.indexOf(a.svc));
+  }
+  const halo = el("circle",{id:"tokenHalo",r:16,cx:0,cy:0}); const tok = el("circle",{id:"token",r:7,cx:0,cy:0});
+  const prev = render.last || pos;
+  halo.style.transform = tok.style.transform = `translate(${prev[0]}px,${prev[1]}px)`;
+  svg.append(halo,tok);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ halo.style.transform = tok.style.transform = `translate(${pos[0]}px,${pos[1]}px)`; }));
+  render.last = pos;
+  if(idx<0) { halo.style.opacity = 0; tok.style.opacity = 0; }
+
+  // caption + log
+  const steps = SCENARIOS[scen].steps;
+  document.getElementById("capNum").textContent = idx<0 ? "00" : String(idx+1).padStart(2,"0")+" / "+steps.length;
+  document.getElementById("capLayer").textContent = idx<0 ? "" : T.layer[layerOf(steps[idx].at)];
+  document.getElementById("capText").textContent = idx<0 ? T.ready : steps[idx][lang];
+  const log = document.getElementById("log"); log.textContent="";
+  steps.forEach((s,i)=>{
+    const li=document.createElement("li"); if(i===idx) li.className="on"; else if(i<idx) li.className="past";
+    li.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span><span class="l"></span><span class="x"></span>`;
+    li.querySelector(".l").textContent=T.layer[layerOf(s.at)]; li.querySelector(".x").textContent=s[lang];
+    li.addEventListener("click",()=>{stop();idx=i;render();});
+    log.appendChild(li);
+  });
+  const on = log.querySelector("li.on");
+  if(on){ const top = on.offsetTop - log.offsetTop; if(top < log.scrollTop || top + on.offsetHeight > log.scrollTop + log.clientHeight) log.scrollTop = top - log.clientHeight/2; }
+}
+const layerOf = a => typeof a==="string" ? a : a.dept ? "dept" : a.sub ? "sub" : "svc";
+
+function setLang(l){
+  lang=l; try{localStorage.setItem("mt-lang",l);}catch(e){}
+  const T=UI[l];
+  document.getElementById("title").firstChild.textContent=T.title;
+  document.getElementById("subtitle").textContent=T.subtitle;
+  document.getElementById("scenarioLabel").textContent=T.scenario;
+  document.getElementById("reset").textContent=T.reset;
+  document.getElementById("play").textContent=timer?T.pause:T.play;
+  document.getElementById("note").textContent=T.note;
+  document.getElementById("lang-en").setAttribute("aria-pressed",l==="en");
+  document.getElementById("lang-bm").setAttribute("aria-pressed",l==="bm");
+  const sel=document.getElementById("scenario"); sel.textContent="";
+  for(const k in SCENARIOS){ const o=document.createElement("option"); o.value=k; o.textContent=SCENARIOS[k][l]; if(k===scen) o.selected=true; sel.appendChild(o); }
+  document.documentElement.lang = l==="bm" ? "ms" : "en";
+  render();
+}
+function stop(){ clearInterval(timer); timer=null; document.getElementById("play").textContent=UI[lang].play; }
+function step(d){ const n=SCENARIOS[scen].steps.length; idx=Math.max(-1,Math.min(n-1,idx+d)); render(); if(idx>=n-1) stop(); }
+document.getElementById("play").onclick=()=>{
+  if(timer){stop();return;}
+  if(idx>=SCENARIOS[scen].steps.length-1) idx=-1;
+  document.getElementById("play").textContent=UI[lang].pause; step(1); timer=setInterval(()=>step(1),3200);
+};
+document.getElementById("next").onclick=()=>{stop();step(1);};
+document.getElementById("prev").onclick=()=>{stop();step(-1);};
+document.getElementById("reset").onclick=()=>{stop();idx=-1;render.last=null;render();};
+document.getElementById("scenario").onchange=e=>{stop();scen=e.target.value;idx=-1;render.last=null;render();};
+document.getElementById("lang-en").onclick=()=>setLang("en");
+document.getElementById("lang-bm").onclick=()=>setLang("bm");
+document.addEventListener("keydown",e=>{ if(e.target.tagName==="SELECT") return; if(e.key==="ArrowRight"){stop();step(1);} if(e.key==="ArrowLeft"){stop();step(-1);} if(e.key===" "){e.preventDefault();document.getElementById("play").click();} });
+setLang(lang);
+</script>

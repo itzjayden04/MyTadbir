@@ -397,7 +397,38 @@ def impact():
             "fees": round(s.scalar(select(func.sum(Payment.amount)).where(Payment.status == "paid", Payment.direction == "out")) or 0, 2),
             "pending_approvals": s.scalar(select(func.count()).select_from(Approval).where(Approval.status == "pending")) or 0,
             "audit_entries": s.scalar(select(func.count()).select_from(AuditEntry)) or 0,
+            **_impact_series(s),
         }
+
+
+def _impact_series(s) -> dict:
+    """Real figures from the case table: cases per day (14 days) by department, median minutes to close
+    by department, and the most common services. Nothing here is estimated."""
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    from statistics import median
+
+    cases = s.scalars(select(Case)).all()
+    today = _dt.now(_tz.utc).date()
+    days = [(today - _td(days=13 - i)).isoformat() for i in range(14)]
+    per_day: dict[str, dict[str, int]] = {d: {} for d in days}
+    durations: dict[str, list[float]] = {}
+    services: dict[str, int] = {}
+    for c in cases:
+        created = c.created_at if c.created_at.tzinfo else c.created_at.replace(tzinfo=_tz.utc)
+        d = created.date().isoformat()
+        if d in per_day:
+            per_day[d][c.primary_department] = per_day[d].get(c.primary_department, 0) + 1
+        hint = (c.context or {}).get("submodule_hint")
+        if hint:
+            services[hint] = services.get(hint, 0) + 1
+        if c.status == "done":
+            upd = c.updated_at if c.updated_at.tzinfo else c.updated_at.replace(tzinfo=_tz.utc)
+            durations.setdefault(c.primary_department, []).append(max(0.0, (upd - created).total_seconds() / 60))
+    return {
+        "per_day": [{"date": d, "by_dept": per_day[d]} for d in days],
+        "median_minutes": {k: round(median(v), 1) for k, v in durations.items()},
+        "top_services": sorted(services.items(), key=lambda kv: -kv[1])[:6],
+    }
 
 
 # ---------------------------------------------------------------- policy library

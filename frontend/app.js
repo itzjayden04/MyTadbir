@@ -559,11 +559,30 @@ function MapView({ lang, openThread, theme }) {
 }
 
 function ImpactView({ lang }) {
-  const [d] = useLoad("/api/impact");
-  const S = (v, en, bm) => html`<div class="stat"><b>${v}</b><span>${lang === "bm" ? bm : en}</span></div>`;
-  return html`<div class="grid cols-4">${d && html`
-    ${S(d.cases, "Cases handled", "Kes dikendalikan")}${S(d.closed, "Cases closed", "Kes ditutup")}${S(d.dispatched, "Contractors dispatched", "Kontraktor dihantar")}
-    ${S(rm(d.fees), "Fees processed", "Yuran diproses")}${S(d.pending_approvals, "Waiting for a human", "Menunggu manusia")}${S(d.audit_entries, "Audit ledger entries", "Entri lejar audit")}`}</div>`;
+  const B = lang === "bm";
+  const [d] = useLoad("/api/impact"); const [cat, setCat] = useState([]);
+  useEffect(() => { api("/api/catalog").then(setCat).catch(() => {}); }, []);
+  if (!d) return null;
+  const subName = (k) => { for (const x of cat) for (const s of x.subs) if (s.key === k) return [B ? s.bm : s.en, x.key]; return [k, null]; };
+  const S = (v, en, bm, c, sub) => html`<div class="stat" style=${{ "--sc": c }}><span>${B ? bm : en}</span><b>${v}</b>${sub ? html`<small class="muted">${sub}</small>` : null}</div>`;
+  const depts = [...new Set((d.per_day || []).flatMap((x) => Object.keys(x.by_dept)))];
+  const max = Math.max(1, ...(d.per_day || []).map((x) => Object.values(x.by_dept).reduce((a, b) => a + b, 0)));
+  const med = Object.entries(d.median_minutes || {}); const mmax = Math.max(1, ...med.map(([, v]) => v));
+  return html`<div>
+    <div class="page-h"><div><h2>${B ? "Papan impak" : "Impact dashboard"}</h2><p>${B ? "Angka sebenar daripada kes dalam sistem ini." : "Real figures from the cases in this system."}</p></div></div>
+    <div class="grid cols-4" style=${{ marginBottom: 16 }}>
+      ${S(d.cases, "Cases handled", "Kes dikendalikan", "var(--ink)")}${S(d.closed, "Cases closed", "Kes ditutup", "var(--good)")}
+      ${S(d.dispatched, "Crews dispatched", "Kru dihantar", "var(--info)")}${S(rm(d.fees), "Fees processed", "Yuran diproses", "var(--d-inland_revenue)")}
+      ${S(d.pending_approvals, "Waiting for a person", "Menunggu manusia", "var(--warn)")}${S(d.audit_entries, "Audit ledger entries", "Entri lejar audit", "var(--muted)")}</div>
+    <div class="impact-grid">
+      <div class="card"><div class="card-h"><b>${B ? "Kes setiap hari (14 hari)" : "Cases per day (14 days)"}</b></div>
+        <div class="bars">${(d.per_day || []).map((x) => html`<div class="b" key=${x.date} title=${x.date}>${Object.entries(x.by_dept).map(([k, v]) => html`<span key=${k} style=${{ height: (v / max) * 110 + "px", background: dcol(k) }}></span>`)}${!Object.keys(x.by_dept).length ? html`<span style=${{ height: "2px", background: "var(--line)" }}></span>` : null}<small>${x.date.slice(8)}</small></div>`)}</div>
+        <div class="legend">${depts.map((k) => html`<span key=${k}><span class="ddot" style=${{ background: dcol(k) }}></span>${(DEPT_SHORT[k] || [k])[B ? 1 : 0]}</span>`)}</div></div>
+      <div class="card"><div class="card-h"><b>${B ? "Masa median untuk selesai" : "Median time to close"}</b><span class="muted" style=${{ fontSize: 12 }}>${B ? "minit" : "minutes"}</span></div>
+        ${med.length ? med.map(([k, v]) => html`<div class="hbar" key=${k}><span>${(DEPT_SHORT[k] || [k])[B ? 1 : 0]}</span><i><b style=${{ width: (v / mmax) * 100 + "%", background: dcol(k) }}></b></i><span class="mono">${v}</span></div>`) : html`<div class="muted">${B ? "Belum ada kes selesai." : "No closed cases yet."}</div>`}</div>
+      <div class="card"><div class="card-h"><b>${B ? "Perkhidmatan paling kerap" : "Most requested services"}</b></div>
+        ${(d.top_services || []).map(([k, n]) => { const [name, dk] = subName(k); return html`<div class="hbar" key=${k}><span style=${{ display: "inline-flex", gap: 6, alignItems: "center" }}><span class="ddot" style=${{ background: dcol(dk) }}></span>${name}</span><i></i><span class="mono">${n}</span></div>`; })}</div>
+    </div></div>`;
 }
 
 function ActionsView({ t, lang, onDecide }) {
@@ -636,6 +655,7 @@ function PolicyView({ t, lang, user }) {
   const act = async (d) => { await api(d.status === "deleted" ? `/api/memory-bag/documents/${d.doc_id}/restore` : `/api/memory-bag/documents/${d.doc_id}`, { method: d.status === "deleted" ? "POST" : "DELETE" }); loadDocs(); };
   const ACCESS = { public: ["good", t.public], login: ["warn", t.needsLogin] };
   return html`<div>
+    <div class="page-h"><div><h2>${t.policy}</h2><p>${B ? "Akta, undang-undang kecil, borang dan garis panduan rasmi yang dirujuk oleh ejen. Setiap petikan boleh disemak pada sumber rasminya." : "The official Acts, by-laws, forms and guidelines the agents reason from. Every citation can be checked against its official source."}</p></div></div>
     <${MemoryBag} t=${t} lang=${lang} user=${user} onChange=${loadDocs} />
     <form class="toolbar" onSubmit=${run}><input placeholder=${t.policyPh} value=${q} onInput=${(e) => setQ(e.target.value)} />
       <select value=${dept} onChange=${(e) => setDept(e.target.value)}><option value="">${t.dept}: all</option>${[...new Set(docs.map((d) => d.dept))].map((k) => html`<option>${k}</option>`)}</select>
@@ -692,11 +712,21 @@ function DemoView({ t, lang, quick, logout }) {
 }
 
 function SettingsView({ t, lang, setLang, theme, setTheme, user }) {
-  return html`<div class="view-narrow grid">
-    <div class="card"><b>${lang === "bm" ? "Profil" : "Profile"}</b><p>${user.name}<br/><span class="mono muted">${user.mykad || user.profile?.agency || ""}</span><br/>${user.profile?.address || ""}</p></div>
-    <div class="card"><b>${lang === "bm" ? "Bahasa" : "Language"}</b><div style=${{ marginTop: 8 }}><div class="seg"><button class=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>English</button><button class=${lang === "bm" ? "on" : ""} onClick=${() => setLang("bm")}>Bahasa Malaysia</button></div></div></div>
-    <div class="card"><b>${lang === "bm" ? "Tema" : "Theme"}</b><div style=${{ marginTop: 8 }}><div class="seg"><button class=${theme === "light" ? "on" : ""} onClick=${() => setTheme("light")}>Light</button><button class=${theme === "dark" ? "on" : ""} onClick=${() => setTheme("dark")}>Dark</button></div></div></div>
-    <div class="card"><b>${lang === "bm" ? "Notifikasi & privasi" : "Notifications & privacy"}</b><p class="muted">${lang === "bm" ? "Notifikasi dalam aplikasi sahaja dalam demo. SMS dan e-mel disimulasikan. Data demo adalah rekaan." : "In-app notifications only in the demo; SMS and email are simulated. Demo data is fictitious."}</p></div>
+  const B = lang === "bm"; const [tab, setTab] = useState("profile");
+  const mk = user.mykad ? user.mykad.slice(0, 10) + "••••" : "-";
+  const TABS = [["profile", B ? "Profil" : "Profile"], ["lang", B ? "Bahasa" : "Language"], ["theme", B ? "Tema" : "Theme"], ["notif", B ? "Notifikasi" : "Notifications"], ["privacy", B ? "Privasi" : "Privacy"]];
+  return html`<div class="view-narrow">
+    <div class="page-h"><div><h2>${t.settings}</h2><p>${B ? "Profil, bahasa, tema dan privasi anda." : "Your profile, language, theme and privacy."}</p></div></div>
+    <div class="tabs">${TABS.map(([k, l]) => html`<button key=${k} class=${tab === k ? "on" : ""} onClick=${() => setTab(k)}>${l}</button>`)}</div>
+    ${tab === "profile" && html`<div class="card"><dl class="kv"><dt>${B ? "Nama" : "Name"}</dt><dd>${user.name}</dd><dt>MyKad</dt><dd class="mono">${mk}</dd>
+      <dt>${B ? "Alamat" : "Address"}</dt><dd>${user.profile?.address || "-"}</dd><dt>${B ? "Telefon" : "Phone"}</dt><dd class="mono">${user.profile?.phone || "-"}</dd>
+      <dt>${B ? "Pengesahan" : "Verification"}</dt><dd>${user.verified ? html`<span class="badge-ok">${I("BadgeCheck")} MyDigital ID</span>` : "-"}</dd></dl></div>`}
+    ${tab === "lang" && html`<div class="card"><div class="seg"><button class=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>English</button><button class=${lang === "bm" ? "on" : ""} onClick=${() => setLang("bm")}>Bahasa Malaysia</button></div><p class="muted" style=${{ fontSize: 13 }}>${B ? "Cadangan pantas dan mesej mengikut bahasa ini." : "Quick suggestions and messages follow this language."}</p></div>`}
+    ${tab === "theme" && html`<div class="card"><div class="seg"><button class=${theme === "light" ? "on" : ""} onClick=${() => setTheme("light")}>${B ? "Cerah" : "Light"}</button><button class=${theme === "dark" ? "on" : ""} onClick=${() => setTheme("dark")}>${B ? "Gelap" : "Dark"}</button></div></div>`}
+    ${tab === "notif" && html`<div class="card">${[["in_app", B ? "Dalam aplikasi" : "In-app", true], ["sms", "SMS", false], ["email", "E-mel / Email", false]].map(([k, l, on]) => html`<label class="lrow" key=${k}><input type="checkbox" checked=${store.get("mt-n-" + k, on)} onChange=${(e) => store.set("mt-n-" + k, e.target.checked)} />${l}</label>`)}
+      <p class="muted" style=${{ fontSize: 13 }}>${B ? "SMS dan e-mel disimulasikan dalam versi ini." : "SMS and email are simulated in this version."}</p></div>`}
+    ${tab === "privacy" && html`<div class="card"><p style=${{ marginTop: 0 }}>${B ? "Muat turun semua kes, bayaran dan dokumen anda." : "Download all your cases, payments and documents."}</p>
+      <button class="btn" onClick=${async () => { const data = { cases: await api("/api/cases"), payments: await api("/api/payments"), documents: await api("/api/documents") }; const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })); a.download = "mytadbir-my-data.json"; a.click(); }}>${I("Download")} ${B ? "Muat turun data saya" : "Download my data"}</button></div>`}
   </div>`;
 }
 

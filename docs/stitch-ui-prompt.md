@@ -6,7 +6,7 @@ Paste **Part 1** first so Stitch learns the design system. Then paste one screen
 
 ## Part 1 — Design system (paste first)
 
-Design a web application called **MyTadbir**, a Malaysian public-service desk where a citizen makes one request and the system routes it to the right government department and carries it out. It is used by citizens and by government officers. It must feel like a serious, trustworthy, production government service, calm and precise, not a startup landing page and not an AI demo.
+Design a web application called **MyTadbir**, a Malaysian public-service desk where a citizen makes one request and the system routes it to the right government department and carries it out. It is used by citizens only; officers work in their own back-office systems, and their decisions appear in MyTadbir as case updates. It must feel like a serious, trustworthy, production government service, calm and precise, not a startup landing page and not an AI demo.
 
 **Brand and tone**
 - Monochrome brand: black, white and a disciplined grey scale. The interface chrome (backgrounds, text, borders, icons, buttons) is black and white only.
@@ -68,9 +68,9 @@ Calm, simple and official. Lots of white space; nothing crowded.
 - Top of sidebar: wordmark, then a full-width black **"New request"** button (shortcut shown: Ctrl N), then a search field "Search cases and chats" (Ctrl K).
 - Collapsible groups with chevron-down headers:
   - **Commands**: a single **"Departments"** button. Clicking it opens a command palette (popover anchored to the button, or a centered dialog on small screens) listing the 10 departments with their colour dot, active-case count and a searchable list of each department's services. Choosing one pins it as the target of the next request. Below it: "Quick templates" and "Track a case by ID".
-  - **My activity**: My cases (with a count badge), Payments, Documents, Calendar, Notifications (unread badge).
+  - **My activity**: My cases (with a count badge), Action centre (count badge), Payments, Documents, Calendar, Notifications (unread badge).
   - **Live views**: Service map, Impact dashboard.
-  - **Governance** (officers see all; citizens see Policy library only): Approval queue (count badge), Policy library, Audit trail.
+  - **Transparency**: Policy library, Audit trail (the citizen's own cases).
   - **Conversations**: Pinned, then Today / Yesterday / Previous 7 days / Older. Each row shows the auto title and case IDs in mono; hover shows a "⋯" menu (Rename, Pin, Share case link, Delete).
 - Sidebar footer: avatar, name, a small "MyDigital ID verified" check; clicking opens a menu: Profile, Settings, Language, Theme (Light / Dark / System), Help & feedback, Sign out.
 - Top bar of the workspace: page title, active case chip (e.g. "MT-26-000123 · In progress"), the agent status pill (pulsing dot + "Local Government · Incident dispatcher"), BM/EN switch, and a toggle for the right panel.
@@ -134,17 +134,18 @@ A full-height map (Google Maps JavaScript API, light monochrome map style; dark 
 - Line chart: cases per day (last 30 days) by department; bar chart: average resolution time by department; donut: channel or request type; table: top request types.
 - Department filter and date range at the top right. Charts use the department colours on a white background with light grey gridlines.
 
-### Screen 11 — Approval queue (officers)
-- Split view: list on the left (risk level pill, action type, case ID, age, department), detail on the right.
-- Detail: proposed action, the agent's reasoning summary, policy citations (clickable), evidence (photos, documents), cost or amount, and the history of the case.
-- Actions: Approve (black), Reject (red outline), Request more information (opens a short note field). Keyboard shortcuts A / R.
-- Badge counts by risk: High, Medium, Low.
+### Screen 11 — Action centre
+Everything waiting on the citizen or on an officer, in one place.
+- Two tabs: **Waiting for you** (confirm a payment, upload a missing document, answer a question) and **Waiting for an officer** (read-only: what the officer is reviewing, why, and the expected response time).
+- Each item: case ID (mono), department dot, what is needed, why (one line plus policy citation), deadline or SLA timer, and the primary action button (e.g. "Confirm RM150.00 payment", "Upload document").
+- Officer-review items show a progress state (Submitted → Under review → Decided) and the officer's decision note when it arrives.
+- Count badge on the sidebar item.
 
 ### Screen 12 — Policy library
 - Search bar with filters: department, document type (Act, By-law, Form, Guideline, Circular, Web page), language, access (Public / Needs login), **tags**.
-- **Memory Bag status card**: active documents, passages, last full scan, next scan date, a change log (add / update / delete events with colour pills), and for officers: "Re-scan now" and "Upload a document" (for sources that need a login).
+- **Memory Bag status card**: active documents, passages, last full scan, next scan date, a change log (add / update / delete events with colour pills), shown read-only to the citizen as proof that sources are current.
 - Results show title, agency, page, "as at" date, tag chips and an excerpt with the search terms highlighted; "Open official source" link.
-- Documents table: title, agency, department, type, as-at date, access pill, last checked, status; officers can delete or restore.
+- Documents table: title, agency, department, type, as-at date, access pill, last checked.
 
 ### Screen 13 — Audit trail
 - Choose a case; a vertical timeline of every action (actor, action, time in mono), each with its hash (shortened, mono) and an expandable payload.
@@ -169,7 +170,7 @@ A full-height map (Google Maps JavaScript API, light monochrome map style; dark 
 | Notifications | `GET /api/notifications` | `id, case_id, channel, en, bm, created_at` |
 | Service map | `GET /api/map` | `kind (incident, contractor, flood_watch, school…), label, lat, lng, meta` |
 | Impact | `GET /api/impact` | `cases, closed, dispatched, fees, pending_approvals, audit_entries` |
-| Approvals | `GET /api/approvals`, `POST /api/approvals/{id}/decide` | `id, case_id, action, reason, proposed, status, actor` |
+| Action centre | `GET /api/approvals`, `POST /api/approvals/{id}/decide` (citizen items only) | `id, case_id, action, reason, proposed, status, actor (citizen / officer)` |
 | Policy library | `GET /api/policy/search`, `GET /api/policy/documents`, `GET /api/memory-bag` | `title_en/bm, page, url, as_at, agency, dept, access, tags[], excerpt`; `active_documents, chunks, last_full_scan, next_scan, recent_changes[]` |
 | Audit | `GET /api/cases/{id}/timeline`, `GET /api/health` | `id, ts, actor, action, payload, hash`; `audit_chain_valid` |
 

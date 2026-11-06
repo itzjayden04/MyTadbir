@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -94,6 +95,12 @@ async def _drive(ctx: CaseContext, dept_key: str, hop: int, secondary: str | Non
             audit.log("case_manager", "case_awaiting_approval", outcome.data, case_id=ctx.case_id, thread_id=ctx.thread_id)
             await bus.emit(ctx.thread_id, ctx.case_id, "case_manager", "case_manager", "paused",
                            {"reason": "waiting for a human decision", **outcome.data})
+            aid = outcome.data.get("approval_id")
+            if aid:
+                with SessionLocal() as s_:
+                    action = s_.get(Approval, aid).action
+                if not action.startswith("citizen_"):
+                    asyncio.create_task(_simulated_officer(aid))
             return {"case_id": ctx.case_id, "status": "awaiting_approval", "chain": ctx.handoff_chain}
 
         nxt = outcome.handoff_to if outcome.status == "handoff" else None
@@ -125,6 +132,19 @@ async def _drive(ctx: CaseContext, dept_key: str, hop: int, secondary: str | Non
     await bus.emit(ctx.thread_id, ctx.case_id, "case_manager", "case_manager", "case_done",
                    {"status": final, "chain": ctx.handoff_chain, "summary_en": outcome.summary_en, "summary_bm": outcome.summary_bm})
     return {"case_id": ctx.case_id, "status": final, "chain": ctx.handoff_chain}
+
+
+OFFICER_REVIEW_SECONDS = float(os.environ.get("MYTADBIR_OFFICER_REVIEW_SECONDS", "20"))
+
+
+async def _simulated_officer(approval_id: int) -> None:
+    """MyTadbir is citizen-only: officers decide in their own back-office system. For the demo, that
+    decision is simulated here after a short review time, and arrives in the case like a real one."""
+    await asyncio.sleep(OFFICER_REVIEW_SECONDS)
+    try:
+        await decide(approval_id, True, "officer (MBPJ back office, simulated)")
+    except ValueError:
+        pass  # already decided
 
 
 async def decide(approval_id: int, approved: bool, decided_by: str) -> dict:

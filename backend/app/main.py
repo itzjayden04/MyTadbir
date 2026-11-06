@@ -28,7 +28,7 @@ from .modules import always_on  # noqa: F401
 from .router import case_manager
 from .router.intent_router import route
 from .router.schemas import RoutingDecision
-from .services import audit, intake, memory_bag, rag, tagger
+from .services import audit, complexity, intake, memory_bag, rag, tagger
 
 ROOT = Path(__file__).resolve().parents[2]
 UPLOADS = Path(__file__).resolve().parents[1] / "data" / "uploads"
@@ -111,7 +111,7 @@ def me(u: User = Depends(current_user)):
 def health():
     ok, bad = audit.verify_chain()
     return {"status": "ok", "audit_chain_valid": ok, "first_bad_entry": bad,
-            "llm": {"provider": "deepseek", "tasks": llm.TASKS} if llm.available() else {"provider": "offline"}}
+            "llm": {"provider": "deepseek", "model_by_level": complexity.PLAN} if llm.available() else {"provider": "offline"}}
 
 
 @app.get("/api/catalog")

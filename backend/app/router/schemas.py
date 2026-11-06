@@ -36,6 +36,8 @@ class RoutedIntent(BaseModel):
     secondary_department: str | None = None
     reason: str = ""
     order_note: str | None = None
+    level: int | None = None
+    level_reasons: list[str] = []
 
 
 class RoutingDecision(BaseModel):

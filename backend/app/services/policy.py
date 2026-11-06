@@ -51,13 +51,18 @@ async def retrieve(ctx: CaseContext, query: str, *, dept: str | None, k: int = 5
 async def reason(ctx: CaseContext, question: str, facts: dict, hits: list[dict]) -> PolicyReasoning | None:
     if not llm.available() or not hits:
         return None
+    if llm.plan("legal_reasoning", ctx.scratch.get("level")) is None:
+        await bus.emit(ctx.thread_id, ctx.case_id, "service", "policy_rag_agent", "skipped",
+                       {"reason": "level 1 case: citations only, no model call", "llm": {"model": "none", "tokens": 0}})
+        return None
     excerpts = "\n\n".join(f"[{h['chunk_id']}] {h['title_en']} p.{h['page']}:\n{h['text']}" for h in hits)
     system = ("You are the Legal & Policy agent of a Malaysian government service. Apply ONLY the excerpts "
               "provided to the facts. Cite excerpt IDs exactly as given. If something you need is not in the "
               "excerpts, still state it but set is_assumption=true and leave chunk_ids empty. Never invent a "
               "section number, fee or deadline that is not in an excerpt. Write each point in English and BM.")
     user = f"Question: {question}\n\nFacts: {facts}\n\nExcerpts:\n{excerpts}"
-    out, meta = await asyncio.to_thread(llm.chat_json, "legal_reasoning", system, user, PolicyReasoning, max_tokens=6000)
+    out, meta = await asyncio.to_thread(lambda: llm.chat_json("legal_reasoning", system, user, PolicyReasoning,
+                                                               max_tokens=6000, level=ctx.scratch.get("level")))
     valid_ids = {h["chunk_id"] for h in hits}
     for f in out.findings:
         bad = [c for c in f.chunk_ids if c not in valid_ids]

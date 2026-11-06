@@ -41,6 +41,7 @@ def _ctx(case: Case, lang: str) -> CaseContext:
     )
     ctx.scratch.update(c.get("scratch", {}))
     ctx.scratch.setdefault("submodule_hint", c.get("submodule_hint"))
+    ctx.scratch.setdefault("level", c.get("level", 3))
     return ctx
 
 

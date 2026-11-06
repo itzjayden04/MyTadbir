@@ -56,9 +56,9 @@ async def inspect(ctx: CaseContext, path: str, text: str) -> tuple[Inspection, d
                    gps or {"note": "no GPS in photo; will ask citizen to confirm location"})
     if llm.available() and Path(path).exists():
         part = llm.image_part(path)
-        result, meta = await asyncio.to_thread(llm.chat_json, "inspect_image", SYSTEM,
-                                     [part, {"type": "text", "text": f"Citizen message: {text}"}] if part else text,
-                                     Inspection, max_tokens=1500)
+        result, meta = await asyncio.to_thread(lambda: llm.chat_json(
+            "inspect_image", SYSTEM, [part, {"type": "text", "text": f"Citizen message: {text}"}] if part else text,
+            Inspection, max_tokens=1500, level=ctx.scratch.get("level")))
         llm_meta = meta.model_dump()
     else:
         # Offline estimate so the demo still runs without an API key; clearly labelled.

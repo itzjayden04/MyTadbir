@@ -8,7 +8,7 @@ from ..core.module import Module, ModuleResult, registry
 from ..core.trace import bus
 from ..db.models import Approval, MapPoint, SessionLocal, Ticket
 from ..mocks import gov_apis
-from ..services import execution, multimodal, notification, pdfgen, policy
+from ..services import complexity, execution, multimodal, notification, pdfgen, policy
 
 # Demo default when the photo has no GPS: a residential street beside a school in Petaling Jaya.
 DEMO_LOCATION = {"lat": 3.1073, "lng": 101.6067, "address": "Jalan SS 2/24, Petaling Jaya (beside a primary school)",
@@ -41,6 +41,11 @@ class IncidentDispatcher(Module):
         else:
             insp, gps = await multimodal.inspect(ctx, "", text)
         loc = {**DEMO_LOCATION, **gps} if gps else dict(DEMO_LOCATION)
+        new_level = complexity.raise_for_severity(ctx.scratch.get("level", 3), insp.severity)
+        if new_level != ctx.scratch.get("level"):
+            await bus.emit(ctx.thread_id, ctx.case_id, "case_manager", "complexity", "level_raised",
+                           {"from": ctx.scratch.get("level"), "to": new_level, "why": f"severity {insp.severity}"})
+            ctx.scratch["level"] = new_level
         school = insp.near_school_or_public_area or "sekolah" in text.lower() or "school" in text.lower()
 
         # 3. Live weather for the district

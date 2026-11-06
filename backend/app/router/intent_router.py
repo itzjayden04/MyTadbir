@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 
 from ..core.trace import bus
 from ..db.models import Case, SessionLocal, Thread
-from ..services import audit, tagger
+from ..services import audit, complexity, tagger
 from .classifier import KeywordClassifier, get_classifier
 from .schemas import ClassifierOutput, RoutedIntent, RoutingDecision
 
@@ -111,6 +111,8 @@ async def route(text: str, *, image_paths: list[str] | None = None, doc_paths: l
         for seq, g in enumerate(ordered, start=1):
             case_id = _new_case_id(s)
             verify = g.confidence < ROUTE_THRESHOLD
+            level, level_why = complexity.assess(g.submodule, has_photo=bool(image_paths), has_file=bool(doc_paths),
+                                                 verify_flag=verify)
             context = {
                 "identity": identity or {},
                 "evidence": [{"kind": "photo", "path": p} for p in image_paths] + [{"kind": "document", "path": p} for p in (doc_paths or [])]
@@ -118,6 +120,7 @@ async def route(text: str, *, image_paths: list[str] | None = None, doc_paths: l
                 "history": [{"role": "citizen", "text": text}],
                 "prior_cases": prior,
                 "submodule_hint": g.submodule,
+                "level": level, "level_reasons": level_why,
                 "tags": sorted(tagger.query_tags(g.text, submodule=g.submodule) | {f"dept:{g.department}"}),
                 "secondary_department": g.secondary_department,
                 "linked_cases": [],  # filled below
@@ -129,7 +132,7 @@ async def route(text: str, *, image_paths: list[str] | None = None, doc_paths: l
             routed.append(RoutedIntent(case_id=case_id, seq=seq, text=g.text, department=g.department,
                                        submodule=g.submodule, confidence=g.confidence, verify_flag=verify,
                                        secondary_department=g.secondary_department, reason=g.reason,
-                                       order_note=notes.get(id(g))))
+                                       order_note=notes.get(id(g)), level=level, level_reasons=level_why))
         ids = [r.case_id for r in routed]
         for c in s.scalars(select(Case).where(Case.id.in_(ids))):
             c.context = {**c.context, "linked_cases": [i for i in ids if i != c.id]}

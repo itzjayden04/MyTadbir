@@ -292,20 +292,49 @@ function useLoad(path, deps = []) {
   return [d, load];
 }
 
-function CasesView({ t, lang, cases, openThread, openAudit, query }) {
-  const [f, setF] = useState(query || ""); const [st, setSt] = useState("");
-  const rows = cases.filter((c) => (!st || c.status === st) && (!f || JSON.stringify(c).toLowerCase().includes(f.toLowerCase())));
-  return html`<div><div class="toolbar"><input placeholder=${t.searchPh} value=${f} onInput=${(e) => setF(e.target.value)} />
-    <select value=${st} onChange=${(e) => setSt(e.target.value)}><option value="">${t.status}: all</option>${["queued", "running", "awaiting_approval", "done", "failed"].map((s) => html`<option>${s}</option>`)}</select></div>
-    <${Table} empty=${t.none} rows=${rows} onRow=${(c) => openThread(c.thread_id)} cols=${[
-      { h: t.caseId, v: (c) => html`<span class="mono">${c.case_id}</span>` },
-      { h: t.dept, v: (c) => (c.chain?.length ? c.chain : [c.current_department]).map((d) => DEPT_ICON[d] + " " + d).join(" → ") },
-      { h: lang === "bm" ? "Permohonan" : "Request", v: (c) => c.intent },
-      { h: t.status, v: (c) => Pill(c.status) },
-      { h: t.date, v: (c) => fmtDate(c.created_at) },
-      { h: "", v: (c) => html`<button class="btn" onClick=${(e) => { e.stopPropagation(); openAudit(c.case_id); }}>${t.audit}</button>` },
-    ]} /></div>`;
+function CasesView({ t, lang, cases, approvals, openThread, openAudit, query }) {
+  const B = lang === "bm";
+  const [mode, setMode] = useState(store.get("mt-casemode", "board")); const [f, setF] = useState(query || ""); const [dept, setDept] = useState(""); const [sel, setSel] = useState(null);
+  const [tl, setTl] = useState([]);
+  useEffect(() => { if (sel) api(`/api/cases/${sel.case_id}/timeline`).then(setTl).catch(() => setTl([])); }, [sel?.case_id]);
+  const waitWho = (c) => (approvals.find((a) => a.case_id === c.case_id && a.status === "pending") || {}).actor;
+  const col = (c) => c.status === "queued" ? "received" : c.status === "running" ? "progress" : c.status === "awaiting_approval" ? (waitWho(c) === "citizen" ? "you" : "officer") : "resolved";
+  const COLS = [["received", B ? "Diterima" : "Received", "var(--muted)"], ["progress", B ? "Dalam proses" : "In progress", "var(--info)"], ["you", B ? "Menunggu anda" : "Waiting for you", "var(--warn)"], ["officer", B ? "Menunggu pegawai" : "Waiting for officer", "var(--agent)"], ["resolved", B ? "Selesai" : "Resolved", "var(--good)"]];
+  const rows = cases.filter((c) => (!dept || (c.chain || []).concat(c.current_department).includes(dept)) && (!f || JSON.stringify(c).toLowerCase().includes(f.toLowerCase())));
+  const age = (c) => { const m = Math.round((Date.now() - new Date(c.created_at)) / 6e4); return m < 60 ? m + " min" : m < 1440 ? Math.round(m / 60) + " h" : Math.round(m / 1440) + " d"; };
+  const csv = "data:text/csv;charset=utf-8," + encodeURIComponent(["case_id,department,request,status,created", ...rows.map((c) => [c.case_id, c.current_department, c.intent.replaceAll(",", " "), c.status, c.created_at].join(","))].join("\n"));
+  const Card = (c) => html`<div class="kcard" key=${c.case_id} onClick=${() => setSel(c)}>
+    <div style=${{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>${DChip(c.current_department, lang)}<span class="mono muted" style=${{ fontSize: 11 }}>${c.case_id}</span></div>
+    <div class="kt">${c.intent}</div>
+    <div style=${{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>${c.level ? Level(c.level, lang, c.level_reasons) : html`<span></span>`}<span class="mono muted" style=${{ fontSize: 11 }}>${age(c)}</span></div></div>`;
+  return html`<div>
+    <div class="page-h"><div><h2>${B ? "Kes saya" : "My cases"}</h2><p>${rows.filter((c) => col(c) !== "resolved").length} ${B ? "aktif" : "active"} · ${rows.length} ${B ? "jumlah" : "total"}</p></div>
+      <div style=${{ display: "flex", gap: 8 }}><div class="seg"><button class=${mode === "board" ? "on" : ""} onClick=${() => { setMode("board"); store.set("mt-casemode", "board"); }}>${B ? "Papan" : "Board"}</button><button class=${mode === "table" ? "on" : ""} onClick=${() => { setMode("table"); store.set("mt-casemode", "table"); }}>${B ? "Jadual" : "Table"}</button></div>
+        <a class="btn" href=${csv} download="mytadbir-cases.csv">${I("Download")} CSV</a></div></div>
+    <div class="toolbar"><input placeholder=${t.searchPh} value=${f} onInput=${(e) => setF(e.target.value)} />
+      <select value=${dept} onChange=${(e) => setDept(e.target.value)}><option value="">${t.dept}: ${B ? "semua" : "all"}</option>${Object.keys(DEPT_SHORT).map((d) => html`<option value=${d}>${DEPT_SHORT[d][B ? 1 : 0]}</option>`)}</select></div>
+    ${mode === "board" ? html`<div class="board">${COLS.map(([k, label, color]) => { const list = rows.filter((c) => col(c) === k); return html`<div class="kcol" key=${k}>
+        <div class="kcol-h"><span class="ddot" style=${{ background: color }}></span>${label}<span class="mono muted">${list.length}</span></div>${list.map(Card)}</div>`; })}</div>`
+      : html`<${Table} empty=${t.none} rows=${rows} onRow=${setSel} cols=${[
+        { h: t.caseId, v: (c) => html`<span class="mono">${c.case_id}</span>` }, { h: t.dept, v: (c) => html`<span style=${{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>${(c.chain?.length ? c.chain : [c.current_department]).map((d) => DChip(d, lang))}</span>` },
+        { h: B ? "Permohonan" : "Request", v: (c) => c.intent }, { h: B ? "Tahap" : "Level", v: (c) => c.level ? Level(c.level, lang) : "-" },
+        { h: t.status, v: (c) => Pill(c.status) }, { h: t.date, v: (c) => html`<span class="mono">${fmtDate(c.created_at)}</span>` }]} />`}
+    ${sel && html`<div class="backdrop" style=${{ zIndex: 1100 }} onClick=${() => setSel(null)}></div><aside class="drawer">
+      <div class="drawer-h"><b class="mono">${sel.case_id}</b>${Pill(sel.status)}<span style=${{ flex: 1 }}></span><button class="icon-btn" onClick=${() => setSel(null)}>${I("X")}</button></div>
+      <div class="drawer-b">
+        <div class="eyebrow">${B ? "Ringkasan" : "Summary"}</div><p style=${{ margin: "4px 0 10px" }}>${sel.intent}</p>
+        ${sel.result && html`<div class="result" style=${{ marginBottom: 12 }}><b>${B ? sel.result.summary_bm : sel.result.summary_en}</b>${sel.wrap?.next_steps?.length ? html`<ul class="next">${sel.wrap.next_steps.map((s) => html`<li>${B ? s.bm : s.en}</li>`)}</ul>` : null}</div>`}
+        ${sel.level && html`<div style=${{ marginBottom: 12 }}>${Level(sel.level, lang, sel.level_reasons)}</div>`}
+        <div class="eyebrow">${B ? "Rantaian jabatan" : "Department chain"}</div>
+        <div class="chain">${(sel.chain?.length ? sel.chain : [sel.current_department]).map((d, i) => html`${i ? html`<span class="arrow">→</span>` : null}${DChip(d, lang)}`)}</div>
+        <div class="eyebrow" style=${{ marginTop: 12 }}>${B ? "Garis masa" : "Timeline"}</div>
+        <ul class="timeline" style=${{ marginTop: 8 }}>${tl.filter((r) => !["sql_write"].includes(r.action)).slice(-14).map((r) => html`<li key=${r.id}><div><span class="mono muted">${fmtTime(r.ts)}</span> · <b>${r.actor}</b></div><div class="muted" style=${{ fontSize: 13 }}>${r.action.replaceAll("_", " ")}</div></li>`)}</ul>
+      </div>
+      <div class="drawer-f"><button class="btn" onClick=${() => { openAudit(sel.case_id); }}>${I("ShieldCheck")} ${t.audit}</button><button class="btn primary" onClick=${() => openThread(sel.thread_id)}>${I("MessageSquare")} ${B ? "Buka perbualan" : "Open conversation"}</button></div>
+    </aside>`}
+  </div>`;
 }
+
 
 function PaymentsView({ t, lang }) {
   const [rows] = useLoad("/api/payments"); const [dept, setDept] = useState(""); const [st, setSt] = useState("");
@@ -386,21 +415,65 @@ function DocumentsView({ t, lang }) {
 }
 
 
+const PREP = {
+  health: [["Bring MyKad and appointment card", "Bawa MyKad dan kad temu janji"], ["Bring current medicines", "Bawa ubat semasa"], ["Arrive 15 minutes early", "Tiba 15 minit awal"]],
+  road_transport: [["Bring vehicle registration card (VOC)", "Bawa kad pendaftaran kenderaan (VOC)"], ["Valid road tax and insurance", "Cukai jalan dan insurans sah"], ["Arrive 15 minutes early", "Tiba 15 minit awal"]],
+  default: [["Bring MyKad", "Bawa MyKad"], ["Bring the case ID", "Bawa ID kes"], ["Arrive 10 minutes early", "Tiba 10 minit awal"]],
+};
 function CalendarView({ t, lang }) {
-  const [rows] = useLoad("/api/appointments");
-  return html`<${Table} empty=${t.none} rows=${rows || []} cols=${[
-    { h: t.date, v: (a) => fmtDate(a.when) }, { h: lang === "bm" ? "Temu janji" : "Appointment", v: (a) => lang === "bm" ? a.title_bm : a.title_en },
-    { h: lang === "bm" ? "Lokasi" : "Location", v: (a) => a.location }, { h: t.dept, v: (a) => DEPT_ICON[a.department] + " " + a.department },
-    { h: t.status, v: (a) => Pill(a.status) }]} />`;
+  const B = lang === "bm";
+  const [rows] = useLoad("/api/appointments"); const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const [sel, setSel] = useState(null); const [done, setDone] = useState(store.get("mt-prep", {}));
+  const all = rows || [];
+  const first = new Date(month); const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
+  const days = [...Array(42)].map((_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
+  const same = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const evs = (d) => all.filter((a) => same(new Date(a.when), d));
+  const upcoming = all.filter((a) => new Date(a.when) >= new Date() && new Date(a.when) - new Date() < 7 * 864e5);
+  const ics = (a) => { const dt = (d) => new Date(d).toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z"; const end = new Date(new Date(a.when).getTime() + 3600e3);
+    return "data:text/calendar;charset=utf-8," + encodeURIComponent(`BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MyTadbir//EN\nBEGIN:VEVENT\nUID:${a.id}@mytadbir\nDTSTAMP:${dt(new Date())}\nDTSTART:${dt(a.when)}\nDTEND:${dt(end)}\nSUMMARY:${B ? a.title_bm : a.title_en}\nLOCATION:${a.location}\nEND:VEVENT\nEND:VCALENDAR`); };
+  const toggle = (k) => { const n = { ...done, [k]: !done[k] }; setDone(n); store.set("mt-prep", n); };
+  const wd = B ? ["Is", "Se", "Ra", "Kh", "Ju", "Sa", "Ah"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return html`<div>
+    <div class="page-h"><div><h2>${t.calendar}</h2><p>${B ? "Semua temu janji yang dibuat melalui MyTadbir, mengikut jabatan." : "Every appointment made through MyTadbir, by department."}</p></div>
+      <div style=${{ display: "flex", gap: 6, alignItems: "center" }}><button class="btn" onClick=${() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>${I("ChevronLeft")}</button>
+        <b style=${{ minWidth: 140, textAlign: "center" }}>${month.toLocaleString(B ? "ms-MY" : "en-MY", { month: "long", year: "numeric" })}</b>
+        <button class="btn" onClick=${() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>${I("ChevronRight")}</button>
+        <button class="btn" onClick=${() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>${B ? "Hari ini" : "Today"}</button></div></div>
+    <div class="cal-wrap">
+      <div class="cal">${wd.map((w) => html`<div class="cal-wd" key=${w}>${w}</div>`)}
+        ${days.map((d) => html`<div key=${d.toISOString()} class=${"cal-d" + (d.getMonth() !== month.getMonth() ? " out" : "") + (same(d, new Date()) ? " today" : "")}>
+          <span class="mono">${d.getDate()}</span>${evs(d).map((a) => html`<button key=${a.id} class="cal-ev" style=${{ "--dc": dcol(a.department) }} onClick=${() => setSel(a)}>${new Date(a.when).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ${B ? a.title_bm : a.title_en}</button>`)}</div>`)}</div>
+      <aside class="cal-side">
+        ${sel ? html`<div class="card"><div class="card-h">${DChip(sel.department, lang)}<span style=${{ flex: 1 }}></span><button class="icon-btn" onClick=${() => setSel(null)}>${I("X")}</button></div>
+          <b style=${{ fontFamily: "var(--f-display)" }}>${B ? sel.title_bm : sel.title_en}</b>
+          <div class="muted" style=${{ marginTop: 6, fontSize: 13.5, display: "grid", gap: 4 }}><span>${I("Clock")} ${fmtDate(sel.when)}</span><span>${I("MapPin")} ${sel.location}</span>${sel.case_id ? html`<span class="mono">${sel.case_id}</span>` : null}</div>
+          <div class="eyebrow" style=${{ marginTop: 12 }}>${B ? "Senarai semak persediaan" : "Preparation checklist"}</div>
+          ${(PREP[sel.department] || PREP.default).map((p, i) => { const k = sel.id + i; return html`<label class="lrow" key=${k}><input type="checkbox" checked=${!!done[k]} onChange=${() => toggle(k)} /><span style=${{ textDecoration: done[k] ? "line-through" : "none" }}>${p[B ? 1 : 0]}</span></label>`; })}
+          <a class="btn" style=${{ marginTop: 10 }} href=${ics(sel)} download=${sel.id + ".ics"}>${I("CalendarPlus")} ${B ? "Tambah ke kalendar saya (.ics)" : "Add to my calendar (.ics)"}</a></div>`
+        : html`<div class="card"><div class="card-h"><b>${B ? "7 hari seterusnya" : "Next 7 days"}</b><span class="pill">${upcoming.length}</span></div>
+          ${upcoming.length ? upcoming.map((a) => html`<button key=${a.id} class="up-ev" style=${{ "--dc": dcol(a.department) }} onClick=${() => setSel(a)}><b>${B ? a.title_bm : a.title_en}</b><span class="muted">${fmtDate(a.when)} · ${a.location}</span></button>`) : html`<div class="muted">${t.none}</div>`}</div>`}
+      </aside></div></div>`;
 }
 
+
 function InboxView({ t, lang, openThread }) {
-  const [rows] = useLoad("/api/notifications");
-  const groups = (rows || []).reduce((m, n) => { (m[n.case_id || n.thread_id] = m[n.case_id || n.thread_id] || []).push(n); return m; }, {});
-  return html`<div class="view-narrow grid">${Object.keys(groups).length === 0 && html`<div class="empty">${t.none}</div>`}
-    ${Object.entries(groups).map(([k, ns]) => html`<div class="card" key=${k}><div class="card-h"><b class="mono">${k}</b><span class="pill">${ns[0].channel}</span>
-      <button class="btn" style=${{ marginLeft: "auto" }} onClick=${() => openThread(ns[0].thread_id)}>${t.open}</button></div>
-      ${ns.map((n) => html`<div style=${{ padding: "6px 0", borderTop: "1px dashed var(--line)" }}><span class="mono muted">${fmtDate(n.created_at)}</span> · ${lang === "bm" ? n.bm : n.en}</div>`)}</div>`)}</div>`;
+  const B = lang === "bm";
+  const [rows] = useLoad("/api/notifications"); const [tab, setTab] = useState("all"); const [seen, setSeen] = useState(store.get("mt-seen-ids", []));
+  const all = rows || [];
+  const isAction = (n) => /confirm|sahkan|approv|lulus/i.test(n.en + n.bm);
+  const shown = all.filter((n) => tab === "all" || (tab === "action" ? isAction(n) : !isAction(n)));
+  const groups = shown.reduce((m, n) => { (m[n.case_id || n.thread_id] = m[n.case_id || n.thread_id] || []).push(n); return m; }, {});
+  const markAll = () => { const ids = all.map((n) => n.id); setSeen(ids); store.set("mt-seen-ids", ids); };
+  const CH = { in_app: "Bell", sms: "MessageSquareText", email: "Mail" };
+  return html`<div class="view-narrow">
+    <div class="page-h"><div><h2>${t.inbox}</h2><p>${B ? "Satu aliran untuk semua jabatan, dikumpul mengikut kes." : "One stream for every department, grouped by case."}</p></div><button class="btn" onClick=${markAll}>${I("CheckCheck")} ${B ? "Tanda semua dibaca" : "Mark all as read"}</button></div>
+    <div class="tabs">${[["all", B ? "Semua" : "All"], ["action", B ? "Perlu tindakan" : "Action needed"], ["updates", B ? "Kemas kini" : "Updates"]].map(([k, l]) => html`<button key=${k} class=${tab === k ? "on" : ""} onClick=${() => setTab(k)}>${l}</button>`)}</div>
+    <div class="grid">${!Object.keys(groups).length && html`<div class="empty">${t.none}</div>`}
+    ${Object.entries(groups).map(([k, ns]) => html`<div class="card" key=${k}>
+      <div class="card-h"><b class="mono">${k}</b><span style=${{ flex: 1 }}></span><button class="btn" onClick=${() => openThread(ns[0].thread_id)}>${t.open} ${I("ArrowUpRight")}</button></div>
+      ${ns.map((n) => html`<div class="note" key=${n.id}>${!seen.includes(n.id) ? html`<span class="ddot" style=${{ background: "var(--bad)" }}></span>` : html`<span class="ddot" style=${{ background: "transparent" }}></span>`}
+        ${I(CH[n.channel] || "Bell")}<span style=${{ flex: 1 }}>${B ? n.bm : n.en}</span><span class="mono muted" style=${{ fontSize: 11.5 }}>${fmtDate(n.created_at)}</span></div>`)}</div>`)}</div></div>`;
 }
 
 const FLOOD_COL = { NORMAL: "#15803d", ALERT: "#ca8a04", WARNING: "#ea580c", DANGER: "#b91c1c" };
@@ -722,8 +795,8 @@ function App() {
   const titleKey = view === "search" ? "search" : view;
   let body;
   switch (view) {
-    case "cases": body = html`<${CasesView} t=${t} lang=${lang} cases=${cases} openThread=${openThread} openAudit=${(id) => { setAuditCase(id); setView("audit"); }} />`; break;
-    case "search": body = html`<${CasesView} t=${t} lang=${lang} cases=${cases} query=${search} openThread=${openThread} openAudit=${(id) => { setAuditCase(id); setView("audit"); }} />`; break;
+    case "cases": body = html`<${CasesView} t=${t} lang=${lang} cases=${cases} approvals=${approvals} openThread=${openThread} openAudit=${(id) => { setAuditCase(id); setView("audit"); }} />`; break;
+    case "search": body = html`<${CasesView} t=${t} lang=${lang} cases=${cases} approvals=${approvals} query=${search} openThread=${openThread} openAudit=${(id) => { setAuditCase(id); setView("audit"); }} />`; break;
     case "payments": body = html`<${PaymentsView} t=${t} lang=${lang} />`; break;
     case "documents": body = html`<${DocumentsView} t=${t} lang=${lang} />`; break;
     case "calendar": body = html`<${CalendarView} t=${t} lang=${lang} />`; break;

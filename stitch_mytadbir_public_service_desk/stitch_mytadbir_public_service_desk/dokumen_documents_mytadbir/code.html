@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html class="h-full" lang="ms">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Dokumen (Documents) · MyTadbir</title>
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts: Plus Jakarta Sans, IBM Plex Sans, IBM Plex Mono -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Plus Jakarta Sans"', 'sans-serif'],
+            sans: ['"IBM Plex Sans"', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'monospace'],
+          },
+          colors: {
+            bg: '#FFFFFF',
+            surface: '#FAFAFA',
+            'surface-2': '#F4F4F5',
+            line: '#E4E4E7',
+            'line-strong': '#D4D4D8',
+            ink: '#09090B',
+            'ink-2': '#3F3F46',
+            muted: '#71717A',
+            dept: {
+              health: '#DC2626',
+              education: '#2563EB',
+              localgov: '#0F766E',
+              immigration: '#7C3AED',
+              jpj: '#EA580C',
+              lhdn: '#CA8A04',
+              jkm: '#DB2777',
+              police: '#1E3A8A',
+              agri: '#16A34A',
+              cross: '#475569',
+            },
+            status: {
+              success: '#15803D',
+              warning: '#B45309',
+              danger: '#B91C1C',
+              info: '#1D4ED8',
+              neutral: '#52525B',
+            }
+          },
+          boxShadow: {
+            floating: '0 8px 24px rgba(0,0,0,0.08)',
+            'floating-lg': '0 12px 32px rgba(0,0,0,0.12)',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+    .status-pulse { animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+  </style>
+</head>
+<body class="h-full bg-white text-ink font-sans antialiased overflow-hidden flex flex-col select-none">
+  <!-- TOP APP BAR -->
+  <header class="h-14 border-b border-line bg-white flex items-center justify-between px-4 z-20 shrink-0">
+    <div class="flex items-center gap-3">
+      <button class="p-1.5 rounded text-ink hover:bg-surface-2 transition-colors" id="toggle-sidebar-btn" title="Toggle Sidebar">
+        <i class="w-4 h-4" data-lucide="panel-left-close"></i>
+      </button>
+      <div class="flex items-center gap-2">
+        <span class="font-display font-bold text-sm tracking-tight">Dokumen & Arkib</span>
+        <span class="text-line-strong text-xs font-mono">/</span>
+        <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2 border border-line text-xs font-mono text-ink-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+          <span class="font-medium">18 Dokumen Berdaftar</span>
+          <span class="text-muted">·</span>
+          <span class="text-muted text-[11px]">Audit Berpusat</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Center Department Status Pill -->
+    <div class="hidden md:flex items-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-line text-xs">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-dept-localgov opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-dept-localgov"></span>
+        </span>
+        <span class="font-medium text-ink-2 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+          <span>Penyimpanan Awan Kerajaan (MyGovCloud)</span>
+          <span class="text-muted">·</span>
+          <span class="text-status-success font-mono text-[11px]">Enkripsi AES-256</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center gap-2.5">
+      <div class="hidden lg:flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+        <button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm">Awam (Citizen)</button>
+        <button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink">Pegawai (Officer)</button>
+      </div>
+      <div class="flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+        <button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm" id="lang-bm">BM</button>
+        <button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink" id="lang-en">EN</button>
+      </div>
+      <div class="h-4 w-[1px] bg-line"></div>
+      <button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-line bg-surface hover:bg-surface-2 text-xs font-mono text-ink-2" id="toggle-trace-btn">
+        <i class="w-3.5 h-3.5 text-muted" data-lucide="activity"></i>
+        <span class="hidden sm:inline">Trace</span>
+        <span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="flex-1 flex overflow-hidden relative">
+    
+    <!-- 1. LEFT COLLAPSIBLE NAVIGATION SIDEBAR -->
+    <aside class="w-64 bg-surface border-r border-line flex flex-col shrink-0 relative transition-all duration-150 h-full z-10 hidden md:flex" id="app-sidebar">
+      <div class="p-3 border-b border-line flex flex-col gap-2.5 shrink-0">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 bg-ink text-white flex items-center justify-center font-display font-bold text-xs rounded-sm tracking-tighter">M</div>
+            <span class="font-display font-bold text-base tracking-tight text-ink">MyTadbir</span>
+          </div>
+          <span class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded bg-surface-2 border border-line text-muted">v2.4</span>
+        </div>
+        <button class="w-full flex items-center justify-between px-3 py-2 bg-ink hover:bg-ink-2 text-white rounded text-xs font-medium transition-colors shadow-sm">
+          <div class="flex items-center gap-2">
+            <i class="w-4 h-4 text-white" data-lucide="plus"></i>
+            <span>Permintaan Baharu</span>
+          </div>
+          <span class="text-[10px] font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">Ctrl N</span>
+        </button>
+      </div>
+
+      <!-- Navigation links -->
+      <div class="flex-1 overflow-y-auto px-2 py-3 space-y-4 text-xs">
+        <div>
+          <div class="px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider">Aktiviti Saya</div>
+          <div class="mt-1 space-y-0.5">
+            <a href="#cases" class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group">
+              <div class="flex items-center gap-2">
+                <i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="folder"></i>
+                <span>Kes Saya</span>
+              </div>
+              <span class="px-1.5 py-0.2 rounded-full bg-surface-2 border border-line text-[11px] font-mono">4</span>
+            </a>
+            <a href="#payments" class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group">
+              <div class="flex items-center gap-2">
+                <i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="credit-card"></i>
+                <span>Bayaran</span>
+              </div>
+              <span class="text-[10px] font-mono text-status-warning bg-amber-50 px-1 py-0.2 rounded border border-amber-200">1 Tertunggak</span>
+            </a>
+            <!-- Active Documents Menu Item -->
+            <a href="#documents" class="flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-2 border border-line text-ink font-medium">
+              <div class="flex items-center gap-2">
+                <i class="w-4 h-4 text-ink" data-lucide="file-text"></i>
+                <span class="font-semibold text-ink">Dokumen</span>
+              </div>
+              <span class="px-1.5 py-0.2 rounded-full bg-ink text-white text-[10px] font-mono font-medium">18</span>
+            </a>
+            <a href="#calendar" class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group">
+              <div class="flex items-center gap-2">
+                <i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="calendar"></i>
+                <span>Kalendar</span>
+              </div>
+            </a>
+            <a href="#notifications" class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group">
+              <div class="flex items-center gap-2">
+                <i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="bell"></i>
+                <span>Pemberitahuan</span>
+              </div>
+              <span class="w-2 h-2 rounded-full bg-status-danger"></span>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <div class="px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider">Perbualan Terkini</div>
+          <div class="mt-1 space-y-0.5">
+            <div class="p-2 rounded bg-white border border-line hover:border-line-strong cursor-pointer">
+              <div class="font-medium text-xs truncate">Aduan Parit Seksyen 14</div>
+              <div class="text-[10px] font-mono text-muted flex items-center gap-1.5 mt-0.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+                <span>MT-26-000123</span>
+              </div>
+            </div>
+            <div class="p-2 rounded hover:bg-surface-2 cursor-pointer">
+              <div class="truncate text-xs text-ink-2">Cukai Jalan Proton X50</div>
+              <div class="text-[10px] font-mono text-muted flex items-center gap-1.5 mt-0.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-dept-jpj"></span>
+                <span>MT-26-000418</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User footer -->
+      <div class="p-2 border-t border-line bg-surface shrink-0">
+        <div class="flex items-center justify-between p-1.5 rounded hover:bg-surface-2 transition-colors">
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            <div class="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center font-display font-semibold text-xs shrink-0">AH</div>
+            <div class="text-left overflow-hidden">
+              <div class="font-medium text-xs text-ink truncate">Ahmad Harith</div>
+              <div class="flex items-center gap-1 text-[10px] font-mono text-status-success">
+                <i class="w-3 h-3 text-status-success" data-lucide="check-circle-2"></i>
+                <span>MyDigital ID Sah</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 2. DOCUMENT REPOSITORY MAIN WORKSPACE (Filters + Documents Grid + Preview Pane) -->
+    <main class="flex-1 flex overflow-hidden bg-white">
+      
+      <!-- A. LEFT FILTER COLUMN (~240px) -->
+      <section class="w-60 border-r border-line bg-surface flex flex-col shrink-0 overflow-y-auto p-3.5 space-y-5 text-xs">
+        
+        <!-- Filter Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-line">
+          <div class="flex items-center gap-1.5 font-display font-bold text-xs uppercase tracking-wider text-ink">
+            <i class="w-3.5 h-3.5 text-ink" data-lucide="filter"></i>
+            <span>Penapis Dokumen</span>
+          </div>
+          <button class="text-[11px] font-mono text-muted hover:text-ink underline" onclick="resetFilters()">Tetap Semula</button>
+        </div>
+
+        <!-- Filter 1: Document Type -->
+        <div>
+          <div class="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted mb-2">Jenis Fail / Type</div>
+          <div class="space-y-1">
+            <button class="w-full flex items-center justify-between px-2 py-1.5 rounded bg-ink text-white font-medium text-left transition-colors" onclick="filterType(this, 'all')">
+              <span class="flex items-center gap-2"><i class="w-3.5 h-3.5" data-lucide="files"></i> Semua Dokumen</span>
+              <span class="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-1.5 py-0.2 rounded">18</span>
+            </button>
+            <button class="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-surface-2 text-ink-2 text-left transition-colors" onclick="filterType(this, 'workticket')">
+              <span class="flex items-center gap-2"><i class="w-3.5 h-3.5 text-muted" data-lucide="clipboard-check"></i> Tiket Kerja Rasmi</span>
+              <span class="text-[10px] font-mono text-muted">4</span>
+            </button>
+            <button class="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-surface-2 text-ink-2 text-left transition-colors" onclick="filterType(this, 'upload')">
+              <span class="flex items-center gap-2"><i class="w-3.5 h-3.5 text-muted" data-lucide="upload-cloud"></i> Muat Naik Warga</span>
+              <span class="text-[10px] font-mono text-muted">5</span>
+            </button>
+            <button class="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-surface-2 text-ink-2 text-left transition-colors" onclick="filterType(this, 'receipt')">
+              <span class="flex items-center gap-2"><i class="w-3.5 h-3.5 text-muted" data-lucide="receipt"></i> Resit & Penyata</span>
+              <span class="text-[10px] font-mono text-muted">4</span>
+            </button>
+            <button class="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-surface-2 text-ink-2 text-left transition-colors" onclick="filterType(this, 'license')">
+              <span class="flex items-center gap-2"><i class="w-3.5 h-3.5 text-muted" data-lucide="badge-check"></i> Lesen & Permit</span>
+              <span class="text-[10px] font-mono text-muted">3</span>
+            </button>
+            <button class="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-surface-2 text-ink-2 text-left transition-colors" onclick="filterType(this, 'brief')">
+              <span class="flex items-center gap-2"><i class="w-3.5 h-3.5 text-muted" data-lucide="book-open"></i> Ringkasan Polisi</span>
+              <span class="text-[10px] font-mono text-muted">2</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter 2: Department -->
+        <div>
+          <div class="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted mb-2">Jabatan / Department</div>
+          <div class="space-y-1">
+            <label class="flex items-center justify-between p-1.5 rounded hover:bg-surface-2 cursor-pointer">
+              <span class="flex items-center gap-2 text-ink-2">
+                <input type="checkbox" checked class="rounded border-line text-ink focus:ring-0 w-3.5 h-3.5"/>
+                <span class="w-2 h-2 rounded-full bg-dept-localgov"></span>
+                <span>MBPJ (PBT)</span>
+              </span>
+              <span class="text-[10px] font-mono text-muted">7</span>
+            </label>
+            <label class="flex items-center justify-between p-1.5 rounded hover:bg-surface-2 cursor-pointer">
+              <span class="flex items-center gap-2 text-ink-2">
+                <input type="checkbox" checked class="rounded border-line text-ink focus:ring-0 w-3.5 h-3.5"/>
+                <span class="w-2 h-2 rounded-full bg-dept-jpj"></span>
+                <span>JPJ (Pengangkutan)</span>
+              </span>
+              <span class="text-[10px] font-mono text-muted">4</span>
+            </label>
+            <label class="flex items-center justify-between p-1.5 rounded hover:bg-surface-2 cursor-pointer">
+              <span class="flex items-center gap-2 text-ink-2">
+                <input type="checkbox" checked class="rounded border-line text-ink focus:ring-0 w-3.5 h-3.5"/>
+                <span class="w-2 h-2 rounded-full bg-dept-lhdn"></span>
+                <span>LHDN (Cukai)</span>
+              </span>
+              <span class="text-[10px] font-mono text-muted">3</span>
+            </label>
+            <label class="flex items-center justify-between p-1.5 rounded hover:bg-surface-2 cursor-pointer">
+              <span class="flex items-center gap-2 text-ink-2">
+                <input type="checkbox" checked class="rounded border-line text-ink focus:ring-0 w-3.5 h-3.5"/>
+                <span class="w-2 h-2 rounded-full bg-dept-health"></span>
+                <span>KKM (Kesihatan)</span>
+              </span>
+              <span class="text-[10px] font-mono text-muted">2</span>
+            </label>
+            <label class="flex items-center justify-between p-1.5 rounded hover:bg-surface-2 cursor-pointer">
+              <span class="flex items-center gap-2 text-ink-2">
+                <input type="checkbox" checked class="rounded border-line text-ink focus:ring-0 w-3.5 h-3.5"/>
+                <span class="w-2 h-2 rounded-full bg-dept-agri"></span>
+                <span>JPS (Saliran/Banjir)</span>
+              </span>
+              <span class="text-[10px] font-mono text-muted">2</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Filter 3: Tags Multi-Select Chips with Counts -->
+        <div>
+          <div class="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted mb-2">Tag / Kata Kunci</div>
+          <div class="flex flex-wrap gap-1.5">
+            <button class="inline-flex items-center gap-1 px-2 py-1 rounded bg-ink text-white text-[11px] font-mono">
+              <span>#drainage</span>
+              <span class="text-[10px] opacity-70">4</span>
+            </button>
+            <button class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white text-[11px] font-mono">
+              <span>#Act-133</span>
+              <span class="text-[10px] text-muted">3</span>
+            </button>
+            <button class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white text-[11px] font-mono">
+              <span>#work-ticket</span>
+              <span class="text-[10px] text-muted">4</span>
+            </button>
+            <button class="inline-flex items-center gap-1 px-2 py-1 rounded bg-ink text-white text-[11px] font-mono">
+              <span>#Petaling-Jaya</span>
+              <span class="text-[10px] opacity-70">5</span>
+            </button>
+            <button class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white text-[11px] font-mono">
+              <span>#cukai-jalan</span>
+              <span class="text-[10px] text-muted">2</span>
+            </button>
+            <button class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white text-[11px] font-mono">
+              <span>#MyDigital-ID</span>
+              <span class="text-[10px] text-muted">3</span>
+            </button>
+            <button class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white text-[11px] font-mono">
+              <span>#resit-FPX</span>
+              <span class="text-[10px] text-muted">4</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter 4: Date Range -->
+        <div>
+          <div class="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted mb-2">Tarikh / Date Range</div>
+          <select class="w-full bg-white border border-line rounded px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-ink">
+            <option>Semua Tarikh (2025 - 2026)</option>
+            <option>30 Hari Terkini</option>
+            <option>Tahun Semasa (2026)</option>
+            <option>Tahun Lepas (2025)</option>
+          </select>
+        </div>
+
+        <!-- Storage quota widget -->
+        <div class="pt-3 border-t border-line">
+          <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+            <span class="text-muted">Penyimpanan Peti</span>
+            <span class="text-ink font-semibold">14.2 MB / 1 GB</span>
+          </div>
+          <div class="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden border border-line">
+            <div class="h-full bg-ink" style="width: 1.4%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- B. MIDDLE MAIN WORKSPACE: DOCUMENT GRID / LIST -->
+      <section class="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
+        
+        <!-- Header Toolbar -->
+        <div class="p-3.5 border-b border-line flex flex-col gap-3 shrink-0 bg-white">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h1 class="font-display font-bold text-base text-ink tracking-tight">Dokumen & Fail Rasmi</h1>
+              <p class="text-xs text-muted">Pusat arkib dokumen berpusat merentasi agensi awam Malaysia dengan rantaian pengesahan kriptografi.</p>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <!-- Upload button -->
+              <button class="flex items-center gap-2 px-3 py-1.5 bg-ink hover:bg-ink-2 text-white rounded text-xs font-medium transition-colors shadow-sm">
+                <i class="w-3.5 h-3.5 text-white" data-lucide="upload"></i>
+                <span>Muat Naik Dokumen</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Controls Bar: Search, View Switcher, Sort, Active Tags -->
+          <div class="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+            <!-- Search field -->
+            <div class="relative flex-1 min-w-[240px] max-w-md">
+              <i class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" data-lucide="search"></i>
+              <input type="text" placeholder="Cari dokumen mengikut nama, tag atau ID kes..." class="w-full pl-8 pr-12 py-1.5 bg-surface border border-line rounded text-xs text-ink placeholder:text-muted focus:outline-none focus:border-ink font-sans"/>
+              <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted bg-white px-1 py-0.5 rounded border border-line">Ctrl F</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <!-- Sort dropdown -->
+              <div class="flex items-center gap-1.5 text-xs text-muted">
+                <span class="text-[11px] font-mono">Susun:</span>
+                <select class="bg-surface border border-line rounded px-2 py-1 text-xs text-ink focus:outline-none">
+                  <option>Tarikh Terkini</option>
+                  <option>Nama (A-Z)</option>
+                  <option>Saiz Terbesar</option>
+                </select>
+              </div>
+
+              <!-- View Switcher (Grid vs List) -->
+              <div class="flex items-center bg-surface-2 p-0.5 rounded border border-line text-xs font-mono">
+                <button class="px-2 py-1 rounded bg-white text-ink shadow-sm flex items-center gap-1 font-medium transition-all" id="btn-view-grid" onclick="setViewMode('grid')">
+                  <i class="w-3.5 h-3.5" data-lucide="layout-grid"></i>
+                  <span>Grid</span>
+                </button>
+                <button class="px-2 py-1 rounded text-muted hover:text-ink flex items-center gap-1 font-medium transition-all" id="btn-view-list" onclick="setViewMode('list')">
+                  <i class="w-3.5 h-3.5" data-lucide="list"></i>
+                  <span>Senarai</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Filter Chips row -->
+          <div class="flex items-center gap-2 pt-1 border-t border-line/60 text-xs overflow-x-auto">
+            <span class="text-[10px] font-mono text-muted shrink-0">Tapisan Aktif:</span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-2 border border-line text-[11px] text-ink shrink-0">
+              <span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+              <span>MBPJ / PBT</span>
+              <button class="hover:text-status-danger text-muted ml-0.5">×</button>
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-2 border border-line text-[11px] text-ink shrink-0">
+              <span class="font-mono text-muted">#</span>
+              <span>Petaling-Jaya</span>
+              <button class="hover:text-status-danger text-muted ml-0.5">×</button>
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-2 border border-line text-[11px] text-ink shrink-0">
+              <span class="font-mono text-muted">#</span>
+              <span>drainage</span>
+              <button class="hover:text-status-danger text-muted ml-0.5">×</button>
+            </span>
+            <button class="text-[10px] font-mono text-muted hover:text-ink underline ml-1 shrink-0">Kosongkan Semua</button>
+          </div>
+        </div>
+
+        <!-- Document Grid Content (Scrollable) -->
+        <div class="flex-1 overflow-y-auto p-4" id="documents-grid-container">
+          
+          <!-- GRID VIEW CONTAINER -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5" id="grid-view-cards">
+            
+            <!-- DOC 1: Selected Work Ticket (Active Blue/Black border) -->
+            <div class="group relative rounded-lg border-2 border-ink bg-white p-3.5 shadow-sm hover:shadow-floating transition-all cursor-pointer flex flex-col justify-between" onclick="selectDoc(1)">
+              <div>
+                <!-- Top Row: Icon + Department + More Menu -->
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded bg-red-50 text-status-danger border border-red-200 flex items-center justify-center shrink-0 font-mono font-bold text-xs">
+                      <i class="w-5 h-5 text-status-danger" data-lucide="file-text"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-dept-localgov" title="MBPJ"></span>
+                        <span class="text-[11px] font-medium text-ink">Kerajaan Tempatan (MBPJ)</span>
+                      </div>
+                      <span class="text-[10px] font-mono text-muted">Tiket Kerja Rasmi</span>
+                    </div>
+                  </div>
+                  <span class="px-1.5 py-0.5 bg-ink text-white rounded text-[10px] font-mono font-medium">Dipilih</span>
+                </div>
+
+                <!-- Document Title -->
+                <h3 class="font-display font-bold text-xs text-ink tracking-tight mb-1 group-hover:underline">
+                  Tiket_Kerja_MBPJ_TK-99214.pdf
+                </h3>
+                <p class="text-[11px] text-muted mb-3 line-clamp-2">
+                  Arahan kerja pembersihan parit monsun Jalan 14/20 Petaling Jaya oleh kontraktor KDEB.
+                </p>
+
+                <!-- Tag Chips -->
+                <div class="flex flex-wrap gap-1 mb-3">
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#drainage</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#Act-133</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#work-ticket</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#Petaling-Jaya</span>
+                </div>
+              </div>
+
+              <!-- Card Footer: Case ID + Date + Size -->
+              <div class="pt-2 border-t border-line flex items-center justify-between text-[11px] font-mono text-muted">
+                <span class="font-medium text-ink">MT-26-000123</span>
+                <div class="flex items-center gap-2">
+                  <span>09 Feb 2026</span>
+                  <span>·</span>
+                  <span>245 KB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DOC 2: Photo Citizen Upload -->
+            <div class="group relative rounded-lg border border-line bg-white p-3.5 hover:border-line-strong hover:shadow-floating transition-all cursor-pointer flex flex-col justify-between" onclick="selectDoc(2)">
+              <div>
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded bg-blue-50 text-dept-education border border-blue-200 flex items-center justify-center shrink-0">
+                      <i class="w-5 h-5 text-dept-education" data-lucide="image"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-dept-localgov"></span>
+                        <span class="text-[11px] font-medium text-ink">MBPJ Seksyen 14</span>
+                      </div>
+                      <span class="text-[10px] font-mono text-muted">Muat Naik Warga</span>
+                    </div>
+                  </div>
+                  <span class="px-1.5 py-0.5 bg-green-50 text-status-success border border-green-200 rounded text-[10px] font-mono">EXIF SAH</span>
+                </div>
+
+                <h3 class="font-display font-bold text-xs text-ink tracking-tight mb-1 group-hover:underline">
+                  Aduan_Foto_Parit_Seksyen14.jpg
+                </h3>
+                <p class="text-[11px] text-muted mb-3 line-clamp-2">
+                  Foto bukti air parit melimpah akibat sisa runtuhan batu tepi tebing. GPS: 3.1128° N, 101.6322° E.
+                </p>
+
+                <div class="flex flex-wrap gap-1 mb-3">
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#drainage</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#Petaling-Jaya</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#bukti-foto</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-line flex items-center justify-between text-[11px] font-mono text-muted">
+                <span class="font-medium text-ink">MT-26-000123</span>
+                <div class="flex items-center gap-2">
+                  <span>09 Feb 2026</span>
+                  <span>·</span>
+                  <span>1.8 MB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DOC 3: LHDN Official Receipt -->
+            <div class="group relative rounded-lg border border-line bg-white p-3.5 hover:border-line-strong hover:shadow-floating transition-all cursor-pointer flex flex-col justify-between" onclick="selectDoc(3)">
+              <div>
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded bg-amber-50 text-status-warning border border-amber-200 flex items-center justify-center shrink-0">
+                      <i class="w-5 h-5 text-status-warning" data-lucide="receipt"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-dept-lhdn"></span>
+                        <span class="text-[11px] font-medium text-ink">Lembaga Hasil (LHDN)</span>
+                      </div>
+                      <span class="text-[10px] font-mono text-muted">Resit Rasmi Pembayaran</span>
+                    </div>
+                  </div>
+                  <span class="px-1.5 py-0.5 bg-zinc-100 text-ink-2 border border-line rounded text-[10px] font-mono">DuitNow</span>
+                </div>
+
+                <h3 class="font-display font-bold text-xs text-ink tracking-tight mb-1 group-hover:underline">
+                  Resit_Rasmi_LHDN_2026-8819.pdf
+                </h3>
+                <p class="text-[11px] text-muted mb-3 line-clamp-2">
+                  Resit perakuan e-Filing taksiran tahunan & pelepasan zakat Ahmad Harith.
+                </p>
+
+                <div class="flex flex-wrap gap-1 mb-3">
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#resit-FPX</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#cukai-taksiran</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#LHDN-eFiling</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-line flex items-center justify-between text-[11px] font-mono text-muted">
+                <span class="font-medium text-ink">MT-26-000789</span>
+                <div class="flex items-center gap-2">
+                  <span>02 Feb 2026</span>
+                  <span>·</span>
+                  <span>112 KB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DOC 4: JPJ Digital Driving Licence -->
+            <div class="group relative rounded-lg border border-line bg-white p-3.5 hover:border-line-strong hover:shadow-floating transition-all cursor-pointer flex flex-col justify-between" onclick="selectDoc(4)">
+              <div>
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded bg-orange-50 text-dept-jpj border border-orange-200 flex items-center justify-center shrink-0">
+                      <i class="w-5 h-5 text-dept-jpj" data-lucide="badge-check"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-dept-jpj"></span>
+                        <span class="text-[11px] font-medium text-ink">Pengangkutan Jalan (JPJ)</span>
+                      </div>
+                      <span class="text-[10px] font-mono text-muted">Lesen & Permit</span>
+                    </div>
+                  </div>
+                  <span class="px-1.5 py-0.5 bg-green-50 text-status-success border border-green-200 rounded text-[10px] font-mono">Aktif</span>
+                </div>
+
+                <h3 class="font-display font-bold text-xs text-ink tracking-tight mb-1 group-hover:underline">
+                  Lesen_Memandu_Digital_JPJ.pdf
+                </h3>
+                <p class="text-[11px] text-muted mb-3 line-clamp-2">
+                  Salinan sah e-LMM Kelas D & DA diperbaharui secara digital melalui pengesahan MyDigital ID.
+                </p>
+
+                <div class="flex flex-wrap gap-1 mb-3">
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#cukai-jalan</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#JPJ-MySikap</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#MyDigital-ID</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-line flex items-center justify-between text-[11px] font-mono text-muted">
+                <span class="font-medium text-ink">MT-26-000418</span>
+                <div class="flex items-center gap-2">
+                  <span>18 Jan 2026</span>
+                  <span>·</span>
+                  <span>430 KB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DOC 5: JPS Drainage Technical Report -->
+            <div class="group relative rounded-lg border border-line bg-white p-3.5 hover:border-line-strong hover:shadow-floating transition-all cursor-pointer flex flex-col justify-between" onclick="selectDoc(5)">
+              <div>
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded bg-green-50 text-dept-agri border border-green-200 flex items-center justify-center shrink-0">
+                      <i class="w-5 h-5 text-dept-agri" data-lucide="book-open"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-dept-agri"></span>
+                        <span class="text-[11px] font-medium text-ink">Pengairan & Saliran (JPS)</span>
+                      </div>
+                      <span class="text-[10px] font-mono text-muted">Laporan Teknikal / Brief</span>
+                    </div>
+                  </div>
+                  <span class="px-1.5 py-0.5 bg-zinc-100 text-muted border border-line rounded text-[10px] font-mono">Lampiran</span>
+                </div>
+
+                <h3 class="font-display font-bold text-xs text-ink tracking-tight mb-1 group-hover:underline">
+                  Laporan_Teknikal_JPS_Saliran.pdf
+                </h3>
+                <p class="text-[11px] text-muted mb-3 line-clamp-2">
+                  Penilaian kapasiti hidraulik Sungai Penchala & limpahan monsun Sub-lembangan Seksyen 14.
+                </p>
+
+                <div class="flex flex-wrap gap-1 mb-3">
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#drainage</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#Act-133</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#hidrologi</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-line flex items-center justify-between text-[11px] font-mono text-muted">
+                <span class="font-medium text-ink">MT-26-000123</span>
+                <div class="flex items-center gap-2">
+                  <span>08 Feb 2026</span>
+                  <span>·</span>
+                  <span>1.2 MB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DOC 6: Business Premise Registration Certificate -->
+            <div class="group relative rounded-lg border border-line bg-white p-3.5 hover:border-line-strong hover:shadow-floating transition-all cursor-pointer flex flex-col justify-between" onclick="selectDoc(6)">
+              <div>
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded bg-teal-50 text-dept-localgov border border-teal-200 flex items-center justify-center shrink-0">
+                      <i class="w-5 h-5 text-dept-localgov" data-lucide="shield-check"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-dept-localgov"></span>
+                        <span class="text-[11px] font-medium text-ink">MBPJ Pelesenan</span>
+                      </div>
+                      <span class="text-[10px] font-mono text-muted">Perakuan Berkanun</span>
+                    </div>
+                  </div>
+                  <span class="px-1.5 py-0.5 bg-green-50 text-status-success border border-green-200 rounded text-[10px] font-mono">Disahkan</span>
+                </div>
+
+                <h3 class="font-display font-bold text-xs text-ink tracking-tight mb-1 group-hover:underline">
+                  Perakuan_Pendaftaran_PBT_2025.pdf
+                </h3>
+                <p class="text-[11px] text-muted mb-3 line-clamp-2">
+                  Sijil kebenaran papan tanda dan operasi premis perniagaan Zon Komersial Seksyen 14.
+                </p>
+
+                <div class="flex flex-wrap gap-1 mb-3">
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#Petaling-Jaya</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#kelulusan</span>
+                  <span class="px-1.5 py-0.2 rounded bg-surface-2 border border-line text-[10px] font-mono text-ink-2">#PBT-MBPJ</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-line flex items-center justify-between text-[11px] font-mono text-muted">
+                <span class="font-medium text-ink">MT-25-008812</span>
+                <div class="flex items-center gap-2">
+                  <span>14 Dis 2025</span>
+                  <span>·</span>
+                  <span>580 KB</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- LIST VIEW CONTAINER (Hidden by default) -->
+          <div class="hidden border border-line rounded-lg overflow-hidden bg-white divide-y divide-line" id="list-view-table">
+            <div class="p-2.5 bg-surface text-[11px] font-mono font-medium text-muted flex items-center">
+              <span class="w-12 shrink-0">Jenis</span>
+              <span class="flex-1">Nama Dokumen / Butiran</span>
+              <span class="w-36 hidden sm:block">Jabatan</span>
+              <span class="w-28 hidden md:block">No. Kes</span>
+              <span class="w-24 text-right">Tarikh</span>
+              <span class="w-20 text-right">Saiz</span>
+            </div>
+            
+            <!-- Row 1 -->
+            <div class="p-2.5 flex items-center text-xs hover:bg-surface-2 cursor-pointer bg-zinc-50/60 font-medium" onclick="selectDoc(1)">
+              <div class="w-12 shrink-0"><i class="w-4 h-4 text-status-danger" data-lucide="file-text"></i></div>
+              <div class="flex-1 min-w-0 pr-3">
+                <div class="text-ink font-semibold truncate">Tiket_Kerja_MBPJ_TK-99214.pdf</div>
+                <div class="text-[10px] font-mono text-muted flex gap-2">
+                  <span>#work-ticket</span>
+                  <span>#Act-133</span>
+                  <span>#drainage</span>
+                </div>
+              </div>
+              <div class="w-36 hidden sm:flex items-center gap-1.5 text-xs text-ink-2">
+                <span class="w-2 h-2 rounded-full bg-dept-localgov"></span>
+                <span class="truncate">MBPJ Kejuruteraan</span>
+              </div>
+              <div class="w-28 hidden md:block font-mono text-[11px] text-ink">MT-26-000123</div>
+              <div class="w-24 text-right font-mono text-[11px] text-muted">09 Feb 2026</div>
+              <div class="w-20 text-right font-mono text-[11px] text-muted">245 KB</div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="p-2.5 flex items-center text-xs hover:bg-surface-2 cursor-pointer" onclick="selectDoc(2)">
+              <div class="w-12 shrink-0"><i class="w-4 h-4 text-dept-education" data-lucide="image"></i></div>
+              <div class="flex-1 min-w-0 pr-3">
+                <div class="text-ink font-semibold truncate">Aduan_Foto_Parit_Seksyen14.jpg</div>
+                <div class="text-[10px] font-mono text-muted flex gap-2">
+                  <span>#drainage</span>
+                  <span>#bukti-foto</span>
+                </div>
+              </div>
+              <div class="w-36 hidden sm:flex items-center gap-1.5 text-xs text-ink-2">
+                <span class="w-2 h-2 rounded-full bg-dept-localgov"></span>
+                <span class="truncate">MBPJ Seksyen 14</span>
+              </div>
+              <div class="w-28 hidden md:block font-mono text-[11px] text-ink">MT-26-000123</div>
+              <div class="w-24 text-right font-mono text-[11px] text-muted">09 Feb 2026</div>
+              <div class="w-20 text-right font-mono text-[11px] text-muted">1.8 MB</div>
+            </div>
+
+            <!-- Row 3 -->
+            <div class="p-2.5 flex items-center text-xs hover:bg-surface-2 cursor-pointer" onclick="selectDoc(3)">
+              <div class="w-12 shrink-0"><i class="w-4 h-4 text-status-warning" data-lucide="receipt"></i></div>
+              <div class="flex-1 min-w-0 pr-3">
+                <div class="text-ink font-semibold truncate">Resit_Rasmi_LHDN_2026-8819.pdf</div>
+                <div class="text-[10px] font-mono text-muted flex gap-2">
+                  <span>#resit-FPX</span>
+                  <span>#LHDN-eFiling</span>
+                </div>
+              </div>
+              <div class="w-36 hidden sm:flex items-center gap-1.5 text-xs text-ink-2">
+                <span class="w-2 h-2 rounded-full bg-dept-lhdn"></span>
+                <span class="truncate">Lembaga Hasil (LHDN)</span>
+              </div>
+              <div class="w-28 hidden md:block font-mono text-[11px] text-ink">MT-26-000789</div>
+              <div class="w-24 text-right font-mono text-[11px] text-muted">02 Feb 2026</div>
+              <div class="w-20 text-right font-mono text-[11px] text-muted">112 KB</div>
+            </div>
+
+            <!-- Row 4 -->
+            <div class="p-2.5 flex items-center text-xs hover:bg-surface-2 cursor-pointer" onclick="selectDoc(4)">
+              <div class="w-12 shrink-0"><i class="w-4 h-4 text-dept-jpj" data-lucide="badge-check"></i></div>
+              <div class="flex-1 min-w-0 pr-3">
+                <div class="text-ink font-semibold truncate">Lesen_Memandu_Digital_JPJ.pdf</div>
+                <div class="text-[10px] font-mono text-muted flex gap-2">
+                  <span>#JPJ-MySikap</span>
+                  <span>#MyDigital-ID</span>
+                </div>
+              </div>
+              <div class="w-36 hidden sm:flex items-center gap-1.5 text-xs text-ink-2">
+                <span class="w-2 h-2 rounded-full bg-dept-jpj"></span>
+                <span class="truncate">Jabatan JPJ</span>
+              </div>
+              <div class="w-28 hidden md:block font-mono text-[11px] text-ink">MT-26-000418</div>
+              <div class="w-24 text-right font-mono text-[11px] text-muted">18 Jan 2026</div>
+              <div class="w-20 text-right font-mono text-[11px] text-muted">430 KB</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- C. RIGHT DOCUMENT PREVIEW PANE (~360px) -->
+      <aside class="w-96 border-l border-line bg-surface flex flex-col shrink-0 overflow-y-auto" id="document-preview-pane">
+        
+        <!-- Preview Actions Bar -->
+        <div class="p-3 border-b border-line bg-white flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2">
+            <i class="w-4 h-4 text-ink" data-lucide="eye"></i>
+            <span class="font-display font-semibold text-xs text-ink">Pratonton Fail</span>
+          </div>
+          
+          <div class="flex items-center gap-1">
+            <!-- Download Button -->
+            <button class="p-1.5 rounded hover:bg-surface-2 text-ink-2 hover:text-ink transition-colors" title="Muat Turun Fail (PDF)">
+              <i class="w-4 h-4" data-lucide="download"></i>
+            </button>
+            <!-- Share Link Button -->
+            <button class="p-1.5 rounded hover:bg-surface-2 text-ink-2 hover:text-ink transition-colors" title="Kongsi Pautan Selamat">
+              <i class="w-4 h-4" data-lucide="share-2"></i>
+            </button>
+            <!-- Open Case Link -->
+            <a href="#open-case" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-2 hover:bg-line text-xs font-mono text-ink transition-colors">
+              <span>Buka Kes</span>
+              <i class="w-3 h-3" data-lucide="external-link"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="p-4 space-y-4">
+          
+          <!-- Document Preview Visual Sheet -->
+          <div class="bg-white border border-line rounded-lg shadow-floating p-4 relative overflow-hidden text-xs">
+            <!-- Watermark / Official Header -->
+            <div class="border-b-2 border-ink pb-3 mb-3 text-center">
+              <div class="text-[9px] font-mono uppercase tracking-widest text-muted">KERAJAAN NEGERI SELANGOR</div>
+              <div class="font-display font-bold text-xs text-ink uppercase tracking-tight">MAJLIS BANDARAYA PETALING JAYA</div>
+              <div class="text-[9px] text-muted">JABATAN KEJURUTERAAN & SISA PEPEJAL</div>
+              <div class="mt-2 inline-block px-2 py-0.5 bg-ink text-white font-mono text-[9px] uppercase tracking-wider rounded">
+                TIKET ARAHAN KERJA KONTRAKTOR
+              </div>
+            </div>
+
+            <!-- Key metadata grid -->
+            <div class="space-y-2 text-[11px] pb-3 border-b border-line">
+              <div class="flex justify-between">
+                <span class="text-muted font-mono">No. Tiket:</span>
+                <span class="font-mono font-bold text-ink">TK-MBPJ-99214</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted font-mono">Rujukan Kes:</span>
+                <span class="font-mono font-semibold text-ink">MT-26-000123</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted font-mono">Tarikh Arahan:</span>
+                <span class="font-mono text-ink">09 Feb 2026 (10:42 AM)</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted font-mono">Lokasi Operasi:</span>
+                <span class="text-ink font-medium text-right">Jalan 14/20, Seksyen 14, Petaling Jaya</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted font-mono">Kontraktor Dilantik:</span>
+                <span class="text-ink font-medium">KDEB Waste Management (Zon 7)</span>
+              </div>
+            </div>
+
+            <!-- Scope description -->
+            <div class="py-2.5 space-y-1 text-[11px] border-b border-line">
+              <div class="font-mono text-muted text-[10px] uppercase">Skop Penyelenggaraan:</div>
+              <p class="text-ink leading-relaxed">
+                Pembersihan enapan parit monsun, pengalihan sekatan serpihan batu dan pengorekan longkang utama mengikut peruntukan Seksyen 50(1) Akta Jalan, Parit & Bangunan 1974 [Akta 133].
+              </p>
+            </div>
+
+            <!-- Verification stamp & QR code placeholder -->
+            <div class="pt-3 flex items-center justify-between">
+              <div>
+                <div class="text-[9px] font-mono text-status-success flex items-center gap-1">
+                  <i class="w-3 h-3 text-status-success" data-lucide="shield-check"></i>
+                  <span>Cap Mohor Digital MyTadbir</span>
+                </div>
+                <div class="text-[9px] font-mono text-muted">ID Pegawai: Ir. Zamri (MBPJ)</div>
+              </div>
+              <div class="w-12 h-12 bg-surface-2 border border-line rounded p-1 flex items-center justify-center font-mono text-[8px] text-center text-muted">
+                [QR DISAHKAN]
+              </div>
+            </div>
+          </div>
+
+          <!-- Document Attributes & Audit Trail -->
+          <div class="bg-white border border-line rounded-lg p-3 space-y-2.5 text-xs">
+            <div class="font-display font-bold text-xs text-ink flex items-center justify-between">
+              <span>Maklumat Fail Rasmi</span>
+              <span class="text-[10px] font-mono text-status-success flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+                <span>Integriti Sah</span>
+              </span>
+            </div>
+
+            <div class="space-y-1.5 text-[11px] font-mono text-ink-2 divide-y divide-line/60">
+              <div class="flex justify-between pt-1">
+                <span class="text-muted">Format Fail:</span>
+                <span class="text-ink">PDF / Dokumen Berkanun (v1.7)</span>
+              </div>
+              <div class="flex justify-between pt-1">
+                <span class="text-muted">Saiz:</span>
+                <span class="text-ink">245.4 KB (251,289 Bait)</span>
+              </div>
+              <div class="flex justify-between pt-1">
+                <span class="text-muted">Tarikh Dijana:</span>
+                <span class="text-ink">09 Feb 2026, 10:42:03</span>
+              </div>
+              <div class="flex justify-between pt-1">
+                <span class="text-muted">Enkripsi:</span>
+                <span class="text-ink">AES-256 (MyGovCloud Arkib)</span>
+              </div>
+              <div class="pt-1">
+                <div class="text-muted mb-0.5">Hash Rantaian SHA-256:</div>
+                <div class="p-1 bg-surface-2 rounded font-mono text-[10px] text-ink break-all select-all">
+                  d8e4f1a0c92b8743ef451a992cb581f4a9b3d
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="space-y-2 pt-1">
+            <button class="w-full flex items-center justify-center gap-2 py-2 px-3 bg-ink hover:bg-ink-2 text-white rounded text-xs font-medium transition-colors shadow-sm">
+              <i class="w-3.5 h-3.5 text-white" data-lucide="download"></i>
+              <span>Muat Turun Salinan Diperakui (PDF)</span>
+            </button>
+            <button class="w-full flex items-center justify-center gap-2 py-2 px-3 bg-white hover:bg-surface-2 border border-line text-ink rounded text-xs font-medium transition-colors">
+              <i class="w-3.5 h-3.5 text-muted" data-lucide="printer"></i>
+              <span>Cetak Pengesahan Rasmi</span>
+            </button>
+          </div>
+
+        </div>
+      </aside>
+
+    </main>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function setViewMode(mode) {
+      const gridBtn = document.getElementById('btn-view-grid');
+      const listBtn = document.getElementById('btn-view-list');
+      const gridView = document.getElementById('grid-view-cards');
+      const listView = document.getElementById('list-view-table');
+
+      if (mode === 'grid') {
+        gridBtn.className = "px-2 py-1 rounded bg-white text-ink shadow-sm flex items-center gap-1 font-medium transition-all";
+        listBtn.className = "px-2 py-1 rounded text-muted hover:text-ink flex items-center gap-1 font-medium transition-all";
+        gridView.classList.remove('hidden');
+        listView.classList.add('hidden');
+      } else {
+        listBtn.className = "px-2 py-1 rounded bg-white text-ink shadow-sm flex items-center gap-1 font-medium transition-all";
+        gridBtn.className = "px-2 py-1 rounded text-muted hover:text-ink flex items-center gap-1 font-medium transition-all";
+        gridView.classList.add('hidden');
+        listView.classList.remove('hidden');
+      }
+    }
+
+    function selectDoc(docId) {
+      // Highlights selected preview card
+      console.log('Document selected:', docId);
+    }
+
+    function filterType(btn, type) {
+      const buttons = btn.parentElement.querySelectorAll('button');
+      buttons.forEach(b => {
+        b.className = "w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-surface-2 text-ink-2 text-left transition-colors";
+      });
+      btn.className = "w-full flex items-center justify-between px-2 py-1.5 rounded bg-ink text-white font-medium text-left transition-colors";
+    }
+
+    function resetFilters() {
+      alert('Semua penapis dokumen telah ditetapkan semula.');
+    }
+  </script>
+</body>
+</html>

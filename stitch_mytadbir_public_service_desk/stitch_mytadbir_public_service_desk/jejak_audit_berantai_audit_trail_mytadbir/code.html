@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="ms"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>App Shell &amp; Sidebar · MyTadbir</title>
+<!-- Tailwind Play CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Google Fonts: Plus Jakarta Sans, IBM Plex Sans, IBM Plex Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Plus Jakarta Sans"', 'sans-serif'],
+            sans: ['"IBM Plex Sans"', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'monospace'],
+          },
+          colors: {
+            bg: '#FFFFFF',
+            surface: '#FAFAFA',
+            'surface-2': '#F4F4F5',
+            line: '#E4E4E7',
+            'line-strong': '#D4D4D8',
+            ink: '#09090B',
+            'ink-2': '#3F3F46',
+            muted: '#71717A',
+            dept: {
+              health: '#DC2626',
+              education: '#2563EB',
+              localgov: '#0F766E',
+              immigration: '#7C3AED',
+              jpj: '#EA580C',
+              lhdn: '#CA8A04',
+              jkm: '#DB2777',
+              police: '#1E3A8A',
+              agri: '#16A34A',
+              cross: '#475569',
+            },
+            status: {
+              success: '#15803D',
+              warning: '#B45309',
+              danger: '#B91C1C',
+              info: '#1D4ED8',
+              neutral: '#52525B',
+            }
+          },
+          boxShadow: {
+            floating: '0 8px 24px rgba(0,0,0,0.08)',
+            'floating-lg': '0 12px 32px rgba(0,0,0,0.12)',
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D4D4D8;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #A1A1AA;
+    }
+    
+    .sidebar-resizing {
+      user-select: none;
+      cursor: col-resize;
+    }
+
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+    .status-pulse {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .rotate-180-custom {
+      transform: rotate(180deg);
+    }
+  </style>
+<meta content="web_dashboard" name="shell-type"/></head>
+<body class="h-full bg-white text-ink font-sans antialiased overflow-hidden flex flex-col select-none">
+<!-- TOP APP BAR -->
+<header class="h-14 border-b border-line bg-white flex items-center justify-between px-4 z-20 shrink-0">
+<div class="flex items-center gap-3">
+<!-- Mobile / rail expand button -->
+<button class="p-1.5 rounded text-ink hover:bg-surface-2 transition-colors" id="toggle-sidebar-btn" title="Toggle Sidebar (Ctrl+[)">
+<i class="w-4 h-4" data-lucide="panel-left-close" id="sidebar-icon"></i>
+</button>
+<!-- Breadcrumbs / Page Title -->
+<div class="flex items-center gap-2">
+<span class="font-display font-bold text-sm tracking-tight" id="header-page-title">Pusat Tindakan</span>
+<span class="text-line-strong text-xs font-mono">/</span>
+<!-- Active Case Chip -->
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2 border border-line text-xs font-mono text-ink-2">
+<span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
+<span class="font-medium">MT-26-000123</span>
+<span class="text-muted">·</span>
+<span class="text-muted text-[11px]" id="case-status-text">Dalam Proses</span>
+</div>
+</div>
+</div>
+<!-- Center Agent Status Pill -->
+<div class="hidden md:flex items-center">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-line text-xs">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-dept-localgov opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-dept-localgov"></span>
+</span>
+<span class="font-medium text-ink-2 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+<span>Kerajaan Tempatan (MBPJ)</span>
+<span class="text-muted">·</span>
+<span class="text-muted">Incident dispatcher active</span>
+</span>
+</div>
+</div>
+<!-- Right Controls: Role Badge, Language Switch, Right Panel Toggle -->
+<div class="flex items-center gap-2.5">
+<!-- Role View Toggle (Simulating Citizen vs Officer) -->
+<div class="hidden lg:flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+<button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all" id="role-citizen-btn" onclick="setRole('citizen')">Awam (Citizen)</button>
+<button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all" id="role-officer-btn" onclick="setRole('officer')">Pegawai (Officer)</button>
+</div>
+<!-- Bilateral BM / EN segmented switch -->
+<div class="flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+<button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all" id="lang-bm" onclick="setLang('BM')">BM</button>
+<button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all" id="lang-en" onclick="setLang('EN')">EN</button>
+</div>
+<!-- Divider -->
+<div class="h-4 w-[1px] bg-line"></div>
+<!-- Right Panel Toggle (Live Agent Trace) -->
+<button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-line bg-surface hover:bg-surface-2 text-xs font-mono text-ink-2 transition-colors" id="toggle-right-panel" onclick="toggleRightPanel()" title="Toggle Live Agent Trace (Ctrl+.)">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="activity"></i>
+<span class="hidden sm:inline">Trace</span>
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+</button>
+</div>
+</header>
+<!-- MAIN APP CONTAINER (Sidebar + Workspace + Live Trace Panel) -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- ============================================== -->
+<!-- 1. RESIZABLE SIDEBAR                           -->
+<!-- ============================================== -->
+<aside class="bg-surface border-r border-line flex flex-col shrink-0 relative transition-all duration-150 h-full z-10" id="app-sidebar" style="width: 272px;">
+<!-- Top Sidebar: Wordmark & Actions -->
+<div class="p-3 border-b border-line flex flex-col gap-2.5 shrink-0" id="sidebar-top-section">
+<!-- Wordmark -->
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-ink text-white flex items-center justify-center font-display font-bold text-xs rounded-sm tracking-tighter">M</div>
+<span class="font-display font-bold text-base tracking-tight text-ink">MyTadbir</span>
+</div>
+<span class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded bg-surface-2 border border-line text-muted">v2.4</span>
+</div>
+<!-- Full-width black "New request" button -->
+<button class="w-full flex items-center justify-between px-3 py-2 bg-ink hover:bg-ink-2 text-white rounded text-xs font-medium transition-colors shadow-sm group">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-white" data-lucide="plus"></i>
+<span id="txt-new-request">Permintaan Baharu</span>
+</div>
+<span class="text-[10px] font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">Ctrl N</span>
+</button>
+<!-- Search input field -->
+<div class="relative">
+<i class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" data-lucide="search"></i>
+<input class="w-full pl-8 pr-12 py-1.5 bg-white border border-line rounded text-xs text-ink placeholder:text-muted focus:outline-none focus:border-ink font-sans transition-colors" id="sidebar-search-input" placeholder="Cari kes &amp; perbualan..." type="text"/>
+<span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted bg-surface-2 px-1 py-0.5 rounded border border-line">Ctrl K</span>
+</div>
+</div>
+<!-- Icon-Rail Mode Placeholder (Hidden by default, shown when collapsed to 64px) -->
+<div class="hidden flex-col items-center py-3 gap-3 w-full shrink-0 border-b border-line" id="rail-compact-content">
+<div class="w-7 h-7 bg-ink text-white flex items-center justify-center font-display font-bold text-xs rounded-sm">M</div>
+<button class="w-9 h-9 bg-ink text-white rounded flex items-center justify-center hover:bg-ink-2" title="New Request (Ctrl N)">
+<i class="w-4 h-4" data-lucide="plus"></i>
+</button>
+<button class="w-9 h-9 rounded flex items-center justify-center text-ink-2 hover:bg-surface-2 border border-line" title="Departments Command (D)">
+<i class="w-4 h-4" data-lucide="layout-grid"></i>
+</button>
+</div>
+<!-- Scrollable Navigation Groups -->
+<div class="flex-1 overflow-y-auto px-2 py-3 space-y-4 text-xs" id="sidebar-scrollable-content">
+<!-- GROUP: COMMANDS -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-commands', 'chev-commands')">
+<span id="lbl-commands">Arahan &amp; Templat</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-commands"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-commands">
+<!-- Departments Command Button (opens command palette) -->
+<button class="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors relative border border-transparent hover:border-line" id="open-dept-palette-btn" onclick="toggleDeptPalette(event)">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="building-2"></i>
+<span class="font-medium text-ink" id="txt-departments-nav">Jabatan Kerajaan</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-dept-localgov" title="Target pinned: Local Government"></span>
+<span class="text-[10px] font-mono text-muted">10</span>
+</div>
+</button>
+<!-- Quick templates -->
+<a class="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="templates" href="#templates">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="sparkles"></i>
+<span id="txt-templates">Templat Pantas</span>
+</div>
+</a>
+<!-- Track a case by ID -->
+<a class="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="track-case" href="#track-id">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="hash"></i>
+<span id="txt-track-case">Jejak Kes Mengikut ID</span>
+</div>
+</a>
+</div>
+</div>
+<!-- GROUP: MY ACTIVITY -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-activity', 'chev-activity')">
+<span id="lbl-activity">Aktiviti Saya</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-activity"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-activity">
+<!-- My cases -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="cases" href="#cases">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="folder"></i>
+<span id="txt-my-cases">Kes Saya</span>
+</div>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-2 border border-line text-[11px] font-mono text-ink">4</span>
+</a>
+<!-- Action Centre / Pusat Tindakan (Active Route) -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-2 border border-line text-ink group transition-colors font-medium" data-path="action-centre" href="#action-centre">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-ink" data-lucide="check-circle-2"></i>
+<span id="txt-action-centre">Pusat Tindakan</span>
+</div>
+<span class="px-1.5 py-0.2 rounded-full bg-red-100 border border-red-200 text-status-danger text-[10px] font-mono font-medium">3</span>
+</a>
+<!-- Payments -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="payments" href="#payments">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="credit-card"></i>
+<span id="txt-payments">Bayaran</span>
+</div>
+<span class="text-[10px] font-mono text-status-warning bg-amber-50 px-1 py-0.2 rounded border border-amber-200">1 Tertunggak</span>
+</a>
+<!-- Documents -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="documents" href="#documents">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="file-text"></i>
+<span id="txt-documents">Dokumen</span>
+</div>
+<span class="text-[10px] font-mono text-muted">12</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="calendar" href="#calendar">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="calendar"></i>
+<span id="txt-calendar">Kalendar</span>
+</div>
+</a>
+<!-- Notifications -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="notifications" href="#notifications">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="bell"></i>
+<span id="txt-notifications">Pemberitahuan</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-status-danger" title="Unread notifications"></span>
+</a>
+</div>
+</div>
+<!-- GROUP: LIVE VIEWS -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-live', 'chev-live')">
+<span id="lbl-live-views">Paparan Langsung</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-live"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-live">
+<!-- Service map -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="service-map" href="#service-map">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="map"></i>
+<span id="txt-service-map">Peta Perkhidmatan</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+</a>
+<!-- Impact dashboard -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="impact" href="#impact">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="bar-chart-3"></i>
+<span id="txt-impact-dashboard">Papan Pemuka Impak</span>
+</div>
+</a>
+</div>
+</div>
+<!-- GROUP: GOVERNANCE -->
+<div id="section-governance">
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-governance', 'chev-governance')">
+<div class="flex items-center gap-1.5">
+<span id="lbl-governance">Tadbir Urus</span>
+<span class="text-[9px] px-1 py-0.2 bg-zinc-200 text-ink rounded font-mono" id="badge-officer-only">PEGAWAI</span>
+</div>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-governance"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-governance">
+<!-- Approval queue (Officers only) -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="approvals" href="#approvals" id="nav-approval-queue">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="check-square"></i>
+<span id="txt-approval-queue">Giliran Kelulusan</span>
+</div>
+<span class="px-1.5 py-0.2 rounded-full bg-red-100 text-status-danger text-[10px] font-mono font-medium">3</span>
+</a>
+<!-- Policy library (Visible to all) -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="policy" href="#policy">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="book-open"></i>
+<span id="txt-policy-library">Pusat Dasar &amp; Akta</span>
+</div>
+</a>
+<!-- Audit trail (Officers only) -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" data-path="audit" href="#audit" id="nav-audit-trail">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="shield-check"></i>
+<span id="txt-audit-trail">Jejak Audit Berantai</span>
+</div>
+<span class="text-[10px] font-mono text-status-success">SHA-256</span>
+</a>
+</div>
+</div>
+<!-- GROUP: CONVERSATIONS (CHAT THREADS) -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-conversations', 'chev-conv')">
+<span id="lbl-conversations">Perbualan</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-conv"></i>
+</button>
+<div class="mt-1 space-y-3" id="grp-conversations">
+<!-- Pinned Subgroup -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted flex items-center gap-1">
+<i class="w-3 h-3 text-muted" data-lucide="pin"></i>
+<span id="lbl-pinned">Dipin</span>
+</div>
+<div class="mt-0.5 space-y-0.5">
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink transition-colors cursor-pointer bg-white border border-line">
+<div class="overflow-hidden pr-2">
+<div class="font-medium truncate text-xs">Aduan Parit Tersumbat Seksyen 14</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+<span>MT-26-000123</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity" title="Menu perbualan">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- Hari Ini / Today -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted" id="lbl-today">Hari Ini</div>
+<div class="mt-0.5 space-y-0.5">
+<!-- Active thread -->
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-2 border border-line text-ink transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="font-medium truncate text-xs text-ink">Pembaharuan Cukai Jalan JPJ</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-jpj"></span>
+<span>MT-26-000418</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+<!-- Another item -->
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="truncate text-xs">Semakan Saman Trafik PDRM</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-police"></span>
+<span>MT-26-000402</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- Semalam / Yesterday -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted" id="lbl-yesterday">Semalam</div>
+<div class="mt-0.5 space-y-0.5">
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="truncate text-xs">Temujanji Klinik Kesihatan PJ</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-health"></span>
+<span>MT-26-000391</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- 7 Hari Lepas / Previous 7 days -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted" id="lbl-prev7days">7 Hari Lepas</div>
+<div class="mt-0.5 space-y-0.5">
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="truncate text-xs">Pelepasan Cukai LHDN e-Borang</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-lhdn"></span>
+<span>MT-26-000315</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- FOOTER: User profile & MyDigital ID verification pill -->
+<div class="p-2 border-t border-line bg-surface shrink-0 relative" id="sidebar-footer">
+<button class="w-full flex items-center justify-between p-1.5 rounded hover:bg-surface-2 transition-colors group" id="user-menu-btn" onclick="toggleUserMenu(event)">
+<div class="flex items-center gap-2.5 overflow-hidden">
+<!-- Avatar -->
+<div class="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center font-display font-semibold text-xs shrink-0">
+              AH
+            </div>
+<div class="text-left overflow-hidden">
+<div class="font-medium text-xs text-ink truncate flex items-center gap-1">
+<span>Ahmad Harith</span>
+</div>
+<!-- MyDigital ID verified badge -->
+<div class="flex items-center gap-1 text-[10px] font-mono text-status-success">
+<i class="w-3 h-3 text-status-success" data-lucide="check-circle-2"></i>
+<span class="truncate">MyDigital ID Disahkan</span>
+</div>
+</div>
+</div>
+<i class="w-4 h-4 text-muted group-hover:text-ink shrink-0" data-lucide="chevron-up"></i>
+</button>
+<!-- USER CONTEXT POPOVER MENU -->
+<div class="hidden absolute bottom-14 left-2 right-2 bg-white border border-line rounded-lg shadow-floating p-1 text-xs z-50" id="user-popover-menu">
+<div class="px-2.5 py-1.5 border-b border-line text-[11px]">
+<div class="font-medium text-ink">Ahmad Harith bin Razak</div>
+<div class="font-mono text-muted text-[10px]">881204-14-5531</div>
+</div>
+<div class="py-1">
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="user"></i>
+<span id="menu-profile">Profil Peribadi</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="settings"></i>
+<span id="menu-settings">Tetapan Akaun</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="languages"></i>
+<span id="menu-lang">Bahasa / Language</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="sun-moon"></i>
+<span id="menu-theme">Tema (Cerah / Gelap)</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="help-circle"></i>
+<span id="menu-help">Bantuan &amp; Sokongan</span>
+</button>
+</div>
+<div class="border-t border-line pt-1">
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-red-50 text-status-danger">
+<i class="w-3.5 h-3.5 text-status-danger" data-lucide="log-out"></i>
+<span id="menu-logout">Log Keluar</span>
+</button>
+</div>
+</div>
+</div>
+<!-- DRAG RESIZE HANDLE -->
+<div class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-zinc-400 active:bg-ink transition-colors z-20" id="sidebar-drag-handle" title="Heret untuk ubah saiz (Dwiklik untuk tetapkan semula 272px)">
+</div>
+</aside>
+<!-- ============================================== -->
+<!-- 2. MAIN CONSOLE / WORKSPACE                    -->
+<!-- ============================================== -->
+<main class="flex-1 flex flex-col bg-white overflow-hidden relative"><div class="flex flex-col w-full">
+<!-- SCRIPT TO SYNC APP SHELL CONTEXT (Active route, Header titles, Officer view) -->
+<script>
+    (function initAppShellSync() {
+      const headerTitle = document.getElementById('header-page-title');
+      if (headerTitle) {
+        headerTitle.textContent = 'Jejak Audit Berantai';
+      }
+      const caseStatus = document.getElementById('case-status-text');
+      if (caseStatus) {
+        caseStatus.textContent = 'Lejar Sah Kriptografi';
+      }
+      // Highlight sidebar route if exists in host shell
+      const allNavLinks = document.querySelectorAll('aside nav a, aside [data-path]');
+      allNavLinks.forEach(link => {
+        link.classList.remove('bg-surface-2', 'font-medium', 'text-ink');
+        link.classList.add('text-ink-2');
+      });
+      const auditLink = document.querySelector('[data-path="audit"]') || document.getElementById('nav-audit-trail');
+      if (auditLink) {
+        auditLink.classList.remove('text-ink-2', 'hover:bg-surface-2');
+        auditLink.classList.add('bg-surface-2', 'font-medium', 'text-ink');
+      }
+      // Ensure governance section is expanded
+      const govGrp = document.getElementById('grp-governance');
+      if (govGrp && govGrp.classList.contains('hidden')) {
+        govGrp.classList.remove('hidden');
+      }
+      const officerBadge = document.getElementById('badge-officer-only');
+      if (officerBadge) officerBadge.classList.remove('hidden');
+      const approvalNav = document.getElementById('nav-approval-queue');
+      if (approvalNav) approvalNav.classList.remove('hidden');
+    })();
+  </script>
+<!-- WORKSPACE BODY CONTAINER -->
+<div class="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto max-w-7xl mx-auto w-full">
+<!-- 1. TOP HEADER & VERIFICATION SUITE -->
+<section class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<div class="space-y-1.5 max-w-3xl">
+<div class="flex flex-wrap items-center gap-2.5">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+            Jejak Audit Berantai
+          </h1>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-mono">(Cryptographic Audit Trail)</span>
+<!-- Live Verified Badge -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm" id="chain-live-badge">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-on-surface opacity-75" id="badge-pulse"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-on-surface" id="badge-dot"></span>
+</span>
+<span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-data-mono-sm text-data-mono-sm" id="badge-text">Rantaian Hash Sah (SHA-256)</span>
+</div>
+</div>
+<p class="font-body-default text-body-default text-on-surface-variant leading-relaxed">
+          Setiap transaksi, keputusan ejen AI, dan kelulusan pegawai dimeterai ke dalam lejar rantaian kriptografi berpusat MyTadbir (GovNet Sovereign Ledger) yang dijamin kekal dan tidak boleh dipinda.
+        </p>
+</div>
+<!-- Header Secondary Actions -->
+<div class="flex flex-wrap items-center gap-2 shrink-0">
+<button class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" onclick="downloadJsonExport()">
+<span class="material-symbols-outlined text-[18px]">data_object</span>
+<span>Eksport JSON</span>
+</button>
+<button class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" onclick="downloadPdfCert()">
+<span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+<span>Sijil Integriti (PDF)</span>
+</button>
+<button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-secondary text-on-primary font-label-sm text-label-sm transition-colors shadow-sm" id="btn-reverify" onclick="triggerReverification()">
+<span class="material-symbols-outlined text-[18px]" id="reverify-icon">sync</span>
+<span id="reverify-text">Sahkan Semula Rantaian</span>
+</button>
+</div>
+</section>
+<!-- 2. CASE SELECTOR, METRICS & FILTER BAR -->
+<section class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-4">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<!-- Case Selector Dropdown -->
+<div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider shrink-0 flex items-center gap-1.5" for="case-switcher">
+<span class="material-symbols-outlined text-[16px]">folder_open</span>
+            Pilih Kes:
+          </label>
+<div class="relative min-w-[340px] max-w-lg w-full">
+<select class="w-full appearance-none bg-surface-container px-3.5 py-2.5 pr-10 rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface focus:outline-none" id="case-switcher" onchange="handleCaseChange(this.value)">
+<option selected="" value="MT-26-000123">MT-26-000123 · Aduan Parit Tersumbat Seksyen 14, PJ (MBPJ)</option>
+<option value="MT-26-000418">MT-26-000418 · Pembaharuan Cukai Jalan JPJ &amp; Insurans Digital</option>
+<option value="MT-26-000789">MT-26-000789 · Pelepasan Rebat Cukai Pendapatan e-Filing (LHDN)</option>
+</select>
+<span class="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">expand_more</span>
+</div>
+</div>
+<!-- Search entries within this audit log -->
+<div class="relative w-full lg:w-72">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full pl-9 pr-3 py-2 bg-surface-container rounded-lg font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none" id="audit-search" oninput="filterAuditEvents()" placeholder="Cari hash, aktor, atau frasa..." type="text"/>
+</div>
+</div>
+<!-- Filter chips & Category toggles -->
+<div class="flex flex-wrap items-center justify-between gap-3 pt-3">
+<div class="flex flex-wrap items-center gap-1.5" id="filter-chip-group">
+<button class="filter-btn px-3 py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm transition-colors" onclick="setAuditFilter('all', this)">
+            Semua Entri (7)
+          </button>
+<button class="filter-btn px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" onclick="setAuditFilter('citizen', this)">
+            Warganegara (2)
+          </button>
+<button class="filter-btn px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" onclick="setAuditFilter('ai', this)">
+            Ejen AI (Router &amp; Policy) (3)
+          </button>
+<button class="filter-btn px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" onclick="setAuditFilter('officer', this)">
+            Pegawai &amp; Kontraktor (2)
+          </button>
+</div>
+<!-- Telemetry Summary Pill -->
+<div class="flex items-center gap-2 font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+<span class="inline-flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-on-surface"></span>
+            7 Blok
+          </span>
+<span>·</span>
+<span>Konsensus: Ed25519 + SHA-256</span>
+<span>·</span>
+<span class="text-on-surface font-medium">100% Sah</span>
+</div>
+</div>
+<!-- Quick Metrics Bar -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+<div class="bg-surface-container-low p-3 rounded-lg flex flex-col justify-between">
+<span class="font-caption text-caption text-on-surface-variant uppercase">Genesis Block</span>
+<span class="font-data-mono-default text-data-mono-default text-on-surface font-medium mt-1">10:38:12 MYT</span>
+<span class="font-caption text-caption text-on-surface-variant">Blok Permulaan Kes</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded-lg flex flex-col justify-between">
+<span class="font-caption text-caption text-on-surface-variant uppercase">Latest Block</span>
+<span class="font-data-mono-default text-data-mono-default text-on-surface font-medium mt-1">11:28:44 MYT</span>
+<span class="font-caption text-caption text-on-surface-variant">Pengesahan Lapangan</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded-lg flex flex-col justify-between">
+<span class="font-caption text-caption text-on-surface-variant uppercase">Protokol Tandatangan</span>
+<span class="font-data-mono-default text-data-mono-default text-on-surface font-medium mt-1">Ed25519 Curve</span>
+<span class="font-caption text-caption text-on-surface-variant">Standard GovNet 2026</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded-lg flex flex-col justify-between">
+<span class="font-caption text-caption text-on-surface-variant uppercase">Integriti Rantaian</span>
+<span class="font-data-mono-default text-data-mono-default text-on-surface font-semibold mt-1">Tanpa Usikan (0 Usik)</span>
+<span class="font-caption text-caption text-on-surface-variant">Kedap Manipulasi</span>
+</div>
+</div>
+</section>
+<!-- 3. CRYPTOGRAPHIC INTEGRITY FORMULA & SIMULATION BANNER -->
+<section class="bg-surface-container-high rounded-xl p-5 shadow-sm space-y-4">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface">account_tree</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Formula Rantaian Hash &amp; Mekanisme Anti-Usikan</h2>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Setiap blok mengunci cap jari blok terdahulu (<code class="font-data-mono-sm text-data-mono-sm bg-surface-container px-1 py-0.5 rounded">PrevHash</code>), cap masa milisaat, dan muatan data kanonikal.
+          </p>
+</div>
+<!-- Simulation Toggle -->
+<div class="flex items-center gap-3 bg-surface-container-lowest p-2 rounded-lg shrink-0">
+<span class="font-label-sm text-label-sm text-on-surface">Simulasi Integriti:</span>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high font-data-mono-sm text-data-mono-sm text-on-surface flex items-center gap-1.5 transition-colors" id="sim-toggle-btn" onclick="toggleSimulationTamper()">
+<span class="material-symbols-outlined text-[16px]">bug_report</span>
+<span id="sim-status-label">Uji Usikan (Tamper #05)</span>
+</button>
+</div>
+</div>
+<!-- Formula Visual Box -->
+<div class="p-3.5 bg-surface-container-lowest rounded-lg font-data-mono-sm text-data-mono-sm text-on-surface flex flex-col md:flex-row md:items-center justify-between gap-2 overflow-x-auto">
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant font-caption text-caption uppercase">Algoritma:</span>
+<span class="font-semibold">Hash(N) = SHA256(Hash(N-1) + Timestamp_UTC + Payload_JSON + PrivateKey_Sig)</span>
+</div>
+<span class="font-caption text-caption text-on-surface-variant shrink-0">Masa Pengesahan: ~2.4 ms / blok</span>
+</div>
+<!-- Tamper Alert Banner (Hidden by default, shown during simulation) -->
+<div class="hidden p-4 bg-error-container text-on-error-container rounded-lg flex items-start gap-3 animate-in fade-in duration-200" id="tamper-alert-banner">
+<span class="material-symbols-outlined text-[24px] text-error shrink-0">report_problem</span>
+<div class="space-y-1 text-sm">
+<div class="font-headline-sm text-headline-sm text-error font-bold flex items-center gap-2">
+<span>PERINGATAN: Integriti Rantaian Terjejas di Blok #05</span>
+<span class="font-data-mono-sm text-data-mono-sm px-2 py-0.5 rounded bg-error text-on-error">SHA Mismatch</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">
+            Muatan data Blok #05 telah diubah suai secara tidak sah di luar konsensus. Akibatnya, rantaian hash seterusnya (Blok #06 dan #07) terbatal serta-merta kerana nilai <code class="font-mono">PrevHash</code> tidak sepadan. Sijil integriti digantung.
+          </p>
+</div>
+</div>
+</section>
+<!-- 4. VERTICAL CRYPTOGRAPHIC TIMELINE (THE 7 BLOCKS) -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface">timeline</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Kronologi Blok Audit Rantaian (Chronological Blocks)</h2>
+</div>
+<span class="font-caption text-caption text-on-surface-variant">Menunjukkan 7 daripada 7 blok sah</span>
+</div>
+<div class="space-y-4 relative" id="timeline-container">
+<!-- Visual connecting backline running through left side of timeline -->
+<div class="absolute left-6 top-6 bottom-6 w-0.5 bg-surface-container-high pointer-events-none -z-0" id="timeline-connecting-spine"></div>
+<!-- ==================== BLOCK #01: GENESIS (Citizen) ==================== -->
+<div class="audit-block relative pl-12 transition-all duration-200" data-block-id="1" data-category="citizen">
+<!-- Chain link icon circle node -->
+<div class="absolute left-3.5 top-5 -translate-x-1/2 w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm z-10">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface"></span>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-3.5">
+<!-- Header row: Block ID + Timestamp + Actor Badge -->
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2.5">
+<span class="font-data-mono-default text-data-mono-default font-semibold text-on-surface bg-surface-container px-2 py-0.5 rounded">
+                  BLOCK #01 · GENESIS
+                </span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+                  10:38:12.450 MYT · 28 Jan 2026
+                </span>
+</div>
+<!-- Actor Tag -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">person</span>
+<span>Warganegara: Ahmad Harith</span>
+<span class="font-caption text-caption text-on-surface-variant">(MyDigital ID: 881204-14-5531)</span>
+</div>
+</div>
+<!-- Action & Description -->
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+                Pendaftaran Aduan Awam &amp; Pemuatan 2 Bukti Foto
+              </h3>
+<p class="font-body-default text-body-default text-on-surface-variant mt-1">
+                Pengadu memfailkan laporan parit tersumbat di Seksyen 14, Jalan 14/20 Petaling Jaya. Dua fail visual (EXIF geotag sah) dimuat naik dan dicop masa ke lejar storan diedar IPFS/GovNet.
+              </p>
+</div>
+<!-- Cryptographic Hash Bar -->
+<div class="p-3 bg-surface-container-low rounded-lg font-data-mono-sm text-data-mono-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex flex-wrap items-center gap-3 text-on-surface">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Prev:</span>
+<span class="text-on-surface-variant">0000000000000000...0000 (GENESIS)</span>
+</div>
+<span>→</span>
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Hash:</span>
+<span class="font-semibold text-on-surface">a4f78d2b9101c4e8...71ef4902</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-[11px]">Sig: sig_ed25519_8812...e1f</span>
+<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded text-on-surface font-label-sm text-[11px] transition-colors flex items-center gap-1" onclick="copyHash('a4f78d2b9101c4e8329e46a75bc89012fec90471ef4902', this)">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+<span>Salin Hash</span>
+</button>
+</div>
+</div>
+<!-- Collapsible Payload JSON Accordion -->
+<div class="border-t pt-2">
+<button class="text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 hover:underline py-1" onclick="togglePayload('payload-1', this)">
+<span class="material-symbols-outlined text-[16px] transition-transform duration-150 rotate-icon">expand_more</span>
+<span>Lihat Muatan Data (Payload JSON)</span>
+</button>
+<div class="hidden mt-2 p-3.5 bg-primary-container text-on-primary-container rounded-lg font-data-mono-sm text-data-mono-sm overflow-x-auto space-y-1" id="payload-1">
+<pre class="text-surface-container-lowest leading-relaxed"><code>{
+  "block_height": 1,
+  "transaction_type": "CITIZEN_INCIDENT_INGESTION",
+  "national_id_hash": "sha256:4d8a9e917bf385b2e91244093112c3f8",
+  "auth_method": "MYDIGITAL_ID_SOVEREIGN_PKI",
+  "incident_payload": {
+    "category": "INFRASTRUCTURE_DRAINAGE",
+    "location": {
+      "address": "Jalan 14/20, Seksyen 14, 46100 Petaling Jaya, Selangor",
+      "coordinates": {"lat": 3.1124, "lon": 101.6318},
+      "geotag_source": "DEVICE_GPS_HIGH_ACCURACY"
+    },
+    "attachments": [
+      {"file": "drain_blockage_01.jpg", "sha256": "9b12a884fe01c841aa90..."},
+      {"file": "drain_overflow_02.jpg", "sha256": "3c784410eef801d84920..."}
+    ]
+  },
+  "consensus_witness": "GOVNET_NODE_PUTRAJAYA_PRIMARY"
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== BLOCK #02: AI ROUTER & INTENT ==================== -->
+<div class="audit-block relative pl-12 transition-all duration-200" data-block-id="2" data-category="ai">
+<div class="absolute left-3.5 top-5 -translate-x-1/2 w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm z-10">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface"></span>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-3.5">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2.5">
+<span class="font-data-mono-default text-data-mono-default font-semibold text-on-surface bg-surface-container px-2 py-0.5 rounded">
+                  BLOCK #02
+                </span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+                  10:38:13.112 MYT · 28 Jan 2026
+                </span>
+</div>
+<!-- Actor Tag -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">smart_toy</span>
+<span>Ejen AI Pintar: Router &amp; Pengelasan Niat</span>
+<span class="font-caption text-caption text-on-surface-variant">(Model: deepseek-flash v2 · 312 tok)</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+                Pengesanan Niat &amp; Pengelasan Agensi: MBPJ Seksyen 14 (98.4% Keyakinan)
+              </h3>
+<p class="font-body-default text-body-default text-on-surface-variant mt-1">
+                Ejen penghala menganalisis teks aduan BM dwibahasa dan koordinat geolokasi. Tanggungjawab ditugaskan terus kepada Jabatan Kejuruteraan &amp; Pengurusan Sisa Majlis Bandaraya Petaling Jaya.
+              </p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg font-data-mono-sm text-data-mono-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex flex-wrap items-center gap-3 text-on-surface">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Prev:</span>
+<span>a4f78d2b...4902</span>
+</div>
+<span>→</span>
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Hash:</span>
+<span class="font-semibold text-on-surface">c91e4431...9824f1</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-[11px]">Sig: sig_ai_router_dep_01</span>
+<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded text-on-surface font-label-sm text-[11px] transition-colors flex items-center gap-1" onclick="copyHash('c91e4431b8745ea9824f1412e0984ba16a9082', this)">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+<span>Salin Hash</span>
+</button>
+</div>
+</div>
+<div class="border-t pt-2">
+<button class="text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 hover:underline py-1" onclick="togglePayload('payload-2', this)">
+<span class="material-symbols-outlined text-[16px] transition-transform duration-150 rotate-icon">expand_more</span>
+<span>Lihat Muatan Data (Payload JSON)</span>
+</button>
+<div class="hidden mt-2 p-3.5 bg-primary-container text-on-primary-container rounded-lg font-data-mono-sm text-data-mono-sm overflow-x-auto space-y-1" id="payload-2">
+<pre class="text-surface-container-lowest leading-relaxed"><code>{
+  "block_height": 2,
+  "inference_agent": "INTENT_ROUTER_V2",
+  "confidence_score": 0.9842,
+  "assigned_agency_code": "PBT_SEL_MBPJ_ENG",
+  "agency_name": "Majlis Bandaraya Petaling Jaya (MBPJ)",
+  "routing_rationale": "Jurisdiction matches Selangor Local Gov drainage asset #PJ-DR-SEC14-041",
+  "latency_ms": 142
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== BLOCK #03: AGC POLICY RAG ENGINE ==================== -->
+<div class="audit-block relative pl-12 transition-all duration-200" data-block-id="3" data-category="ai">
+<div class="absolute left-3.5 top-5 -translate-x-1/2 w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm z-10">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface"></span>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-3.5">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2.5">
+<span class="font-data-mono-default text-data-mono-default font-semibold text-on-surface bg-surface-container px-2 py-0.5 rounded">
+                  BLOCK #03
+                </span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+                  10:38:14.004 MYT · 28 Jan 2026
+                </span>
+</div>
+<!-- Actor Tag -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">menu_book</span>
+<span>Enjin Statut RAG: AGC e-Warta Policy Engine</span>
+<span class="font-caption text-caption text-on-surface-variant">(Akta 133 / Akta 171)</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+                Semakan Statut &amp; Keabsahan Perundangan: Seksyen 50(1) Akta 133
+              </h3>
+<p class="font-body-default text-body-default text-on-surface-variant mt-1">
+                Pengesahan mandat berkanun di bawah Akta Jalan, Parit dan Bangunan 1974 [Akta 133]. Ejen undang-undang memvalidasi hak pihak berkuasa tempatan untuk memasuki rizab saliran awam dalam masa 24 jam.
+              </p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg font-data-mono-sm text-data-mono-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex flex-wrap items-center gap-3 text-on-surface">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Prev:</span>
+<span>c91e4431...824f1</span>
+</div>
+<span>→</span>
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Hash:</span>
+<span class="font-semibold text-on-surface">e5d32109...bc110a</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-[11px]">Sig: sig_agc_statute_rag</span>
+<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded text-on-surface font-label-sm text-[11px] transition-colors flex items-center gap-1" onclick="copyHash('e5d32109aa8043bcedf770119bc110a', this)">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+<span>Salin Hash</span>
+</button>
+</div>
+</div>
+<div class="border-t pt-2">
+<button class="text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 hover:underline py-1" onclick="togglePayload('payload-3', this)">
+<span class="material-symbols-outlined text-[16px] transition-transform duration-150 rotate-icon">expand_more</span>
+<span>Lihat Muatan Data (Payload JSON)</span>
+</button>
+<div class="hidden mt-2 p-3.5 bg-primary-container text-on-primary-container rounded-lg font-data-mono-sm text-data-mono-sm overflow-x-auto space-y-1" id="payload-3">
+<pre class="text-surface-container-lowest leading-relaxed"><code>{
+  "block_height": 3,
+  "statute_validation": {
+    "primary_act": "ST-MY-ACT-133",
+    "citation": "Seksyen 50(1) Akta Jalan, Parit dan Bangunan 1974",
+    "statutory_duty": "Pihak berkuasa tempatan bertanggungjawab bagi penyenggaraan dan pembersihan parit awam",
+    "enforcement_power": "Hak masuk untuk kerja-kerja pembersihan kecemasan",
+    "legal_risk_assessment": "TIADA_HALANGAN_PERUNDANGAN"
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== BLOCK #04: DISPATCHER AGENT ==================== -->
+<div class="audit-block relative pl-12 transition-all duration-200" data-block-id="4" data-category="ai">
+<div class="absolute left-3.5 top-5 -translate-x-1/2 w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm z-10">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface"></span>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-3.5">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2.5">
+<span class="font-data-mono-default text-data-mono-default font-semibold text-on-surface bg-surface-container px-2 py-0.5 rounded">
+                  BLOCK #04
+                </span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+                  10:41:02.821 MYT · 28 Jan 2026
+                </span>
+</div>
+<!-- Actor Tag -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">send_time_extension</span>
+<span>Ejen Dispatcher: Incident Dispatcher Autonomi MBPJ</span>
+<span class="font-caption text-caption text-on-surface-variant">(SLA: 4 Jam Tindakan Pantas)</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+                Menjana Arahan Kerja Kontraktor &amp; Anggaran Masa Ketibaan (ETA)
+              </h3>
+<p class="font-body-default text-body-default text-on-surface-variant mt-1">
+                Ejen logistik memetakan zon Zon 7 MBPJ. Arahan pembersihan bernombor WO-MBPJ-2026-881 dikeluarkan kepada kontraktor pembersihan bertauliah KDEB Waste Management bersama koordinat tepat.
+              </p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg font-data-mono-sm text-data-mono-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex flex-wrap items-center gap-3 text-on-surface">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Prev:</span>
+<span>e5d32109...bc110a</span>
+</div>
+<span>→</span>
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Hash:</span>
+<span class="font-semibold text-on-surface">71bc093a...ff2291</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-[11px]">Sig: sig_mbpj_dispatcher_auto</span>
+<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded text-on-surface font-label-sm text-[11px] transition-colors flex items-center gap-1" onclick="copyHash('71bc093a890471bcee817724ff2291', this)">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+<span>Salin Hash</span>
+</button>
+</div>
+</div>
+<div class="border-t pt-2">
+<button class="text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 hover:underline py-1" onclick="togglePayload('payload-4', this)">
+<span class="material-symbols-outlined text-[16px] transition-transform duration-150 rotate-icon">expand_more</span>
+<span>Lihat Muatan Data (Payload JSON)</span>
+</button>
+<div class="hidden mt-2 p-3.5 bg-primary-container text-on-primary-container rounded-lg font-data-mono-sm text-data-mono-sm overflow-x-auto space-y-1" id="payload-4">
+<pre class="text-surface-container-lowest leading-relaxed"><code>{
+  "block_height": 4,
+  "work_order_id": "WO-MBPJ-2026-881",
+  "vendor_assigned": "KDEB_WASTE_MANAGEMENT_SDN_BHD",
+  "zone_code": "PJ_ZONE_07_SEC14",
+  "dispatch_sla_minutes": 240,
+  "estimated_arrival": "2026-01-28T11:45:00+08:00"
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== BLOCK #05: ENGINEER APPROVAL (OFFICER) ==================== -->
+<div class="audit-block relative pl-12 transition-all duration-200" data-block-id="5" data-category="officer" id="block-5-wrapper">
+<div class="absolute left-3.5 top-5 -translate-x-1/2 w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm z-10">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface" id="block-5-node"></span>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-3.5 border-l-4 border-l-on-surface" id="block-5-card">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2.5">
+<span class="font-data-mono-default text-data-mono-default font-semibold text-on-surface bg-surface-container px-2 py-0.5 rounded" id="block-5-tag">
+                  BLOCK #05
+                </span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+                  10:49:15.602 MYT · 28 Jan 2026
+                </span>
+</div>
+<!-- Actor Tag -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">badge</span>
+<span>Jurutera MBPJ: Ir. Mohd Zamri</span>
+<span class="font-caption text-caption text-on-surface-variant">(Pegawai Pengesah Gred J48)</span>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+                  Pengesahan Arahan Masuk Premis oleh Pegawai Bertugas
+                </h3>
+<span class="hidden px-2 py-0.5 rounded bg-error text-on-error font-data-mono-sm text-data-mono-sm" id="tampered-flag">DATA TAMPERED</span>
+</div>
+<p class="font-body-default text-body-default text-on-surface-variant mt-1">
+                Jurutera Daerah menyemak justifikasi teknikal dan meluluskan pengeluaran jentera berat sedut kelodak (Suction Jetter) ke premis Seksyen 14 berserta permit rasmi.
+              </p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg font-data-mono-sm text-data-mono-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex flex-wrap items-center gap-3 text-on-surface">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Prev:</span>
+<span>71bc093a...ff2291</span>
+</div>
+<span>→</span>
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Hash:</span>
+<span class="font-semibold text-on-surface" id="block-5-hash">32ef9011...a8813f</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-[11px]">Sig: sig_gov_officer_j48_8819</span>
+<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded text-on-surface font-label-sm text-[11px] transition-colors flex items-center gap-1" onclick="copyHash('32ef90114092bba0818274a8813fe', this)">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+<span>Salin Hash</span>
+</button>
+</div>
+</div>
+<!-- Pre-expanded sample payload to highlight Rich View -->
+<div class="border-t pt-2">
+<button class="text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 hover:underline py-1" onclick="togglePayload('payload-5', this)">
+<span class="material-symbols-outlined text-[16px] transition-transform duration-150 rotate-icon">expand_more</span>
+<span>Lihat Muatan Data (Payload JSON)</span>
+</button>
+<div class="mt-2 p-3.5 bg-primary-container text-on-primary-container rounded-lg font-data-mono-sm text-data-mono-sm overflow-x-auto space-y-1" id="payload-5">
+<pre class="text-surface-container-lowest leading-relaxed"><code id="code-block-5">{
+  "block_height": 5,
+  "approver": {
+    "name": "Ir. Mohd Zamri bin Osman",
+    "role": "District Civil Engineer (J48)",
+    "officer_id": "SEL-PBT-88914",
+    "digital_token": "MYGOV_PKI_HARDWARE_KEY_7701"
+  },
+  "action": "AUTHORIZE_PUBLIC_RESERVE_INTERVENTION",
+  "machinery_approved": [
+    "SUCTION_JETTER_TRUCK_CLASS_B",
+    "SAFETY_TRAFFIC_CONE_DELINEATOR"
+  ],
+  "special_conditions": "Waktu henti bising maksimum 45 minit mengikut enakmen zon perumahan",
+  "approval_timestamp_epoch": 1769568555
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== BLOCK #06: CONTRACTOR ON SITE ==================== -->
+<div class="audit-block relative pl-12 transition-all duration-200" data-block-id="6" data-category="officer">
+<div class="absolute left-3.5 top-5 -translate-x-1/2 w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm z-10">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface"></span>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-3.5">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2.5">
+<span class="font-data-mono-default text-data-mono-default font-semibold text-on-surface bg-surface-container px-2 py-0.5 rounded">
+                  BLOCK #06
+                </span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+                  11:15:20.910 MYT · 28 Jan 2026
+                </span>
+</div>
+<!-- Actor Tag -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">local_shipping</span>
+<span>Kontraktor Tapak: KDEB Waste Management</span>
+<span class="font-caption text-caption text-on-surface-variant">(Trak: WX-4102 · Telemetri GPS)</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+                Kru &amp; Jentera Tiba di Lokasi (Telemetri Geofence Disahkan)
+              </h3>
+<p class="font-body-default text-body-default text-on-surface-variant mt-1">
+                Trak utiliti WX-4102 melepasi sempadan geofence 50 meter dari parit sasaran. Sensor telemetri IoT kenderaan mengesahkan ketibaan kru bersama 3 operator penyenggaraan.
+              </p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg font-data-mono-sm text-data-mono-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex flex-wrap items-center gap-3 text-on-surface">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Prev:</span>
+<span id="block-6-prev">32ef9011...a8813f</span>
+</div>
+<span>→</span>
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Hash:</span>
+<span class="font-semibold text-on-surface">b21a884f...991a0c</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-[11px]">Sig: sig_iot_telemetry_wx4102</span>
+<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded text-on-surface font-label-sm text-[11px] transition-colors flex items-center gap-1" onclick="copyHash('b21a884f98103322cca019283991a0c', this)">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+<span>Salin Hash</span>
+</button>
+</div>
+</div>
+<div class="border-t pt-2">
+<button class="text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 hover:underline py-1" onclick="togglePayload('payload-6', this)">
+<span class="material-symbols-outlined text-[16px] transition-transform duration-150 rotate-icon">expand_more</span>
+<span>Lihat Muatan Data (Payload JSON)</span>
+</button>
+<div class="hidden mt-2 p-3.5 bg-primary-container text-on-primary-container rounded-lg font-data-mono-sm text-data-mono-sm overflow-x-auto space-y-1" id="payload-6">
+<pre class="text-surface-container-lowest leading-relaxed"><code>{
+  "block_height": 6,
+  "telemetry_event": "GEOFENCE_BREACH_VERIFIED",
+  "vehicle_plate": "WX 4102",
+  "gps_fix": {
+    "latitude": 3.11241,
+    "longitude": 101.63184,
+    "accuracy_meters": 1.2
+  },
+  "crew_headcount": 3,
+  "odometer_km": 42180.4
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== BLOCK #07: CITIZEN PREMISES CONSENT ==================== -->
+<div class="audit-block relative pl-12 transition-all duration-200" data-block-id="7" data-category="citizen">
+<div class="absolute left-3.5 top-5 -translate-x-1/2 w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm z-10">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface"></span>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-3.5">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2.5">
+<span class="font-data-mono-default text-data-mono-default font-semibold text-on-surface bg-surface-container px-2 py-0.5 rounded">
+                  BLOCK #07 · TERKINI
+                </span>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+                  11:28:44.200 MYT · 28 Jan 2026
+                </span>
+</div>
+<!-- Actor Tag -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">verified_user</span>
+<span>Warganegara: Ahmad Harith</span>
+<span class="font-caption text-caption text-on-surface-variant">(Pemberian Izin Masuk Digital)</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+                Sah Kebenaran Masuk Premis Melalui Aplikasi MyTadbir
+              </h3>
+<p class="font-body-default text-body-default text-on-surface-variant mt-1">
+                Pengadu mengimbas kod QR kelulusan fizikal pada tablet kru KDEB. Kebenaran membuka pagar sisi untuk capaian paip sedutan dimeterai secara kriptografi dengan biometrik MyDigital ID.
+              </p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg font-data-mono-sm text-data-mono-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex flex-wrap items-center gap-3 text-on-surface">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Prev:</span>
+<span>b21a884f...991a0c</span>
+</div>
+<span>→</span>
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">Hash:</span>
+<span class="font-semibold text-on-surface">90e4f1a2...3318dd</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-[11px]">Sig: sig_mydigitalid_biometric_pass</span>
+<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded text-on-surface font-label-sm text-[11px] transition-colors flex items-center gap-1" onclick="copyHash('90e4f1a248900119eab0044813318dd', this)">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+<span>Salin Hash</span>
+</button>
+</div>
+</div>
+<div class="border-t pt-2">
+<button class="text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 hover:underline py-1" onclick="togglePayload('payload-7', this)">
+<span class="material-symbols-outlined text-[16px] transition-transform duration-150 rotate-icon">expand_more</span>
+<span>Lihat Muatan Data (Payload JSON)</span>
+</button>
+<div class="hidden mt-2 p-3.5 bg-primary-container text-on-primary-container rounded-lg font-data-mono-sm text-data-mono-sm overflow-x-auto space-y-1" id="payload-7">
+<pre class="text-surface-container-lowest leading-relaxed"><code>{
+  "block_height": 7,
+  "consent_agreement": "SIDE_GATE_DRAIN_ACCESS_PERMIT",
+  "citizen_signed": true,
+  "biometric_token_proof": "FIDO2_PASSKEY_VALIDATED",
+  "qr_handshake_session": "QR_MBPJ_PAIR_99410",
+  "access_granted_duration": "60_MINUTES"
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. FOOTER CONFORMANCE & AUDIT CERTIFICATE NOTICE -->
+<section class="p-4 bg-surface-container-lowest rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 font-caption text-caption text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>Standard Pematuhan: Garis Panduan Tadbir Urus Kecerdasan Buatan Sektor Awam (MAMPU / GovNet Ledger V2.4)</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-mono">Merkle Root: 4e81..2a99</span>
+<span>·</span>
+<span>Node Putrajaya &amp; Cyberjaya Segerak</span>
+</div>
+</section>
+</div>
+<!-- INTERACTIVE SCRIPTS -->
+<script>
+    // 1. Accordion Payload Toggle
+    function togglePayload(id, buttonEl) {
+      const container = document.getElementById(id);
+      const icon = buttonEl.querySelector('.rotate-icon');
+      if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        if (icon) icon.style.transform = 'rotate(180deg)';
+      } else {
+        container.classList.add('hidden');
+        if (icon) icon.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    // 2. Copy Hash utility
+    function copyHash(hash, btn) {
+      navigator.clipboard.writeText(hash).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span class="material-symbols-outlined text-[13px]">check</span><span>Disalin</span>`;
+        btn.classList.add('bg-on-surface', 'text-surface-container-lowest');
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.remove('bg-on-surface', 'text-surface-container-lowest');
+        }, 1800);
+      });
+    }
+
+    // 3. Filter category
+    function setAuditFilter(category, buttonEl) {
+      const buttons = document.querySelectorAll('#filter-chip-group .filter-btn');
+      buttons.forEach(b => {
+        b.className = 'filter-btn px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors';
+      });
+      buttonEl.className = 'filter-btn px-3 py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm transition-colors';
+
+      const blocks = document.querySelectorAll('.audit-block');
+      blocks.forEach(block => {
+        const cat = block.getAttribute('data-category');
+        if (category === 'all' || cat === category) {
+          block.style.display = 'block';
+        } else {
+          block.style.display = 'none';
+        }
+      });
+    }
+
+    // 4. Live Search Filter
+    function filterAuditEvents() {
+      const query = document.getElementById('audit-search').value.toLowerCase().trim();
+      const blocks = document.querySelectorAll('.audit-block');
+      blocks.forEach(block => {
+        const text = block.textContent.toLowerCase();
+        if (text.includes(query)) {
+          block.style.display = 'block';
+        } else {
+          block.style.display = 'none';
+        }
+      });
+    }
+
+    // 5. Case selector simulator
+    function handleCaseChange(caseId) {
+      alert(`Memuatkan Jejak Audit Berantai bagi kes: ${caseId}`);
+    }
+
+    // 6. Reverification Simulator
+    function triggerReverification() {
+      const btn = document.getElementById('btn-reverify');
+      const icon = document.getElementById('reverify-icon');
+      const text = document.getElementById('reverify-text');
+      
+      icon.classList.add('animate-spin');
+      text.textContent = 'Mengesahkan 7 Blok...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        icon.classList.remove('animate-spin');
+        text.textContent = 'Semua 7 Blok 100% Sah';
+        btn.disabled = false;
+        setTimeout(() => {
+          text.textContent = 'Sahkan Semula Rantaian';
+        }, 2200);
+      }, 1200);
+    }
+
+    // 7. Interactive Tamper Simulation (Broken Hash Demonstration)
+    let isTampered = false;
+    function toggleSimulationTamper() {
+      isTampered = !isTampered;
+      const banner = document.getElementById('tamper-alert-banner');
+      const simLabel = document.getElementById('sim-status-label');
+      const block5Card = document.getElementById('block-5-card');
+      const block5Node = document.getElementById('block-5-node');
+      const block5Tag = document.getElementById('block-5-tag');
+      const tamperedFlag = document.getElementById('tampered-flag');
+      const codeBlock5 = document.getElementById('code-block-5');
+      const block5Hash = document.getElementById('block-5-hash');
+      const liveBadge = document.getElementById('chain-live-badge');
+      const badgeDot = document.getElementById('badge-dot');
+      const badgePulse = document.getElementById('badge-pulse');
+      const badgeText = document.getElementById('badge-text');
+
+      if (isTampered) {
+        banner.classList.remove('hidden');
+        simLabel.textContent = 'Pulihkan Integriti Asal';
+        block5Card.classList.remove('border-l-on-surface');
+        block5Card.classList.add('border-l-error', 'bg-error-container/20');
+        block5Node.classList.remove('bg-on-surface');
+        block5Node.classList.add('bg-error');
+        block5Tag.classList.add('bg-error', 'text-on-error');
+        tamperedFlag.classList.remove('hidden');
+        block5Hash.textContent = '9999DEAD...FAIL00 (INVALID)';
+        block5Hash.classList.add('text-error');
+        
+        liveBadge.classList.remove('bg-surface-container', 'text-on-surface');
+        liveBadge.classList.add('bg-error-container', 'text-on-error-container');
+        badgeDot.classList.replace('bg-on-surface', 'bg-error');
+        badgePulse.classList.replace('bg-on-surface', 'bg-error');
+        badgeText.textContent = 'Rantaian Patah (#05 Mismatch)';
+
+        codeBlock5.textContent = `// PERINGATAN: DATA DIUBAH SECARA HARAM DI LUAR KONSENSUS
+{
+  "block_height": 5,
+  "approver": "ANONYMOUS_INTRUDER",
+  "action": "UNAUTHORIZED_PAYLOAD_MANIPULATION",
+  "status": "HASH_CORRUPTED"
+}`;
+      } else {
+        banner.classList.add('hidden');
+        simLabel.textContent = 'Uji Usikan (Tamper #05)';
+        block5Card.classList.remove('border-l-error', 'bg-error-container/20');
+        block5Card.classList.add('border-l-on-surface');
+        block5Node.classList.remove('bg-error');
+        block5Node.classList.add('bg-on-surface');
+        block5Tag.classList.remove('bg-error', 'text-on-error');
+        tamperedFlag.classList.add('hidden');
+        block5Hash.textContent = '32ef9011...a8813f';
+        block5Hash.classList.remove('text-error');
+
+        liveBadge.classList.add('bg-surface-container', 'text-on-surface');
+        liveBadge.classList.remove('bg-error-container', 'text-on-error-container');
+        badgeDot.classList.replace('bg-error', 'bg-on-surface');
+        badgePulse.classList.replace('bg-error', 'bg-on-surface');
+        badgeText.textContent = 'Rantaian Hash Sah (SHA-256)';
+
+        codeBlock5.textContent = `{
+  "block_height": 5,
+  "approver": {
+    "name": "Ir. Mohd Zamri bin Osman",
+    "role": "District Civil Engineer (J48)",
+    "officer_id": "SEL-PBT-88914",
+    "digital_token": "MYGOV_PKI_HARDWARE_KEY_7701"
+  },
+  "action": "AUTHORIZE_PUBLIC_RESERVE_INTERVENTION",
+  "machinery_approved": [
+    "SUCTION_JETTER_TRUCK_CLASS_B",
+    "SAFETY_TRAFFIC_CONE_DELINEATOR"
+  ],
+  "special_conditions": "Waktu henti bising maksimum 45 minit mengikut enakmen zon perumahan",
+  "approval_timestamp_epoch": 1769568555
+}`;
+      }
+    }
+
+    // 8. Download Exports Simulation
+    function downloadJsonExport() {
+      const sampleExport = {
+        ledger_version: "2.4",
+        case_id: "MT-26-000123",
+        block_count: 7,
+        merkle_root: "4e81a90c29f8a339912093110291eabb",
+        consensus: "Ed25519_SHA256",
+        verified_at: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(sampleExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `MyTadbir_Audit_MT-26-000123.json`;
+      a.click();
+    }
+
+    function downloadPdfCert() {
+      alert("Menjana Sijil Integriti Rasmi bertandatangan digital bagi kes MT-26-000123 (GovNet Ledger PKI)...");
+    }
+  </script>
+</div></main>
+<!-- ============================================== -->
+<!-- 3. COLLAPSIBLE RIGHT PANEL: LIVE AGENT TRACE   -->
+<!-- ============================================== -->
+<aside class="w-80 bg-surface border-l border-line flex flex-col shrink-0 h-full transition-all duration-200" id="agent-trace-panel">
+<!-- Panel Header -->
+<div class="h-10 border-b border-line px-3 flex items-center justify-between shrink-0 bg-white">
+<div class="flex items-center gap-2">
+<i class="w-3.5 h-3.5 text-ink" data-lucide="cpu"></i>
+<span class="text-xs font-display font-semibold tracking-tight text-ink">Live Agent Trace</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono text-status-success bg-green-50 border border-green-200">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success status-pulse"></span>
+            LIVE
+          </span>
+<button class="p-1 text-muted hover:text-ink rounded" onclick="toggleRightPanel()">
+<i class="w-3.5 h-3.5" data-lucide="x"></i>
+</button>
+</div>
+</div>
+<!-- Layer Filters & Follow live toggle -->
+<div class="p-2.5 border-b border-line bg-surface space-y-2 shrink-0">
+<div class="flex items-center justify-between text-[11px]">
+<span class="text-muted font-mono uppercase text-[10px]">Tapis Lapisan / Layer</span>
+<label class="flex items-center gap-1.5 cursor-pointer text-muted font-mono text-[10px]">
+<input checked="" class="rounded border-line text-ink focus:ring-0" type="checkbox"/>
+<span>Ikut Langsung (Auto-scroll)</span>
+</label>
+</div>
+<div class="flex flex-wrap gap-1 text-[10px] font-mono">
+<button class="px-1.5 py-0.5 rounded bg-ink text-white font-medium">Semua (5)</button>
+<button class="px-1.5 py-0.5 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white">Router</button>
+<button class="px-1.5 py-0.5 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white">Case Mgr</button>
+<button class="px-1.5 py-0.5 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white">Dept</button>
+</div>
+</div>
+<!-- Chronological trace rows -->
+<div class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs font-sans">
+<!-- Step 1: Router -->
+<div class="p-2 rounded border border-line bg-white space-y-1">
+<div class="flex items-center justify-between text-[10px] font-mono text-muted">
+<span class="text-ink font-medium">10:42:01.120</span>
+<span class="px-1 py-0.2 bg-zinc-100 rounded text-ink-2 border border-line">Router</span>
+</div>
+<div class="text-xs text-ink font-medium">Pengesanan Niat &amp; Pengkelasan Agensi</div>
+<div class="text-[11px] text-muted">Mengenalpasti MBPJ Seksyen 14 sebagai agensi utama (Keyakinan 98.4%).</div>
+<div class="flex items-center justify-between pt-1 border-t border-line text-[10px] font-mono text-muted">
+<span>deepseek-flash</span>
+<span>low · 312 tok</span>
+</div>
+</div>
+<!-- Step 2: Policy citations -->
+<div class="p-2 rounded border border-line bg-white space-y-1">
+<div class="flex items-center justify-between text-[10px] font-mono text-muted">
+<span class="text-ink font-medium">10:42:01.880</span>
+<span class="px-1 py-0.2 bg-zinc-100 rounded text-ink-2 border border-line">Policy Engine</span>
+</div>
+<div class="text-xs text-ink font-medium">Semakan Akta Jalan, Parit &amp; Bangunan 1974</div>
+<div class="text-[11px] text-muted">Seksyen 50(1): Tanggungjawab pihak berkuasa tempatan bagi penyenggaraan parit utama.</div>
+<div class="flex items-center justify-between pt-1 border-t border-line text-[10px] font-mono text-muted">
+<span>deepseek-flash</span>
+<span>med · 540 tok</span>
+</div>
+</div>
+<!-- Step 3: Dispatcher running -->
+<div class="p-2 rounded border border-line bg-surface-2 space-y-1">
+<div class="flex items-center justify-between text-[10px] font-mono text-muted">
+<span class="text-ink font-medium">10:42:02.340</span>
+<span class="px-1 py-0.2 bg-amber-100 text-status-warning rounded border border-amber-200">Dispatcher</span>
+</div>
+<div class="text-xs text-ink font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-status-warning status-pulse"></span>
+            Menjana Tiket Aduan MT-26-000123
+          </div>
+<div class="text-[11px] text-muted">Mengesahkan zon aduan Zon 7 Petaling Jaya. Menunggu pengesahan kontraktor.</div>
+<div class="flex items-center justify-between pt-1 border-t border-line text-[10px] font-mono text-muted">
+<span>deepseek-chat</span>
+<span>running...</span>
+</div>
+</div>
+</div>
+<!-- Trace Footer: Hash status -->
+<div class="p-2 border-t border-line bg-white flex items-center justify-between text-[10px] font-mono text-muted shrink-0">
+<span class="flex items-center gap-1 text-status-success">
+<i class="w-3 h-3 text-status-success" data-lucide="shield"></i>
+<span>Rantaian SHA-256 Sah</span>
+</span>
+<button class="hover:text-ink underline">Salin JSON</button>
+</div>
+</aside>
+</div>
+<!-- ============================================== -->
+<!-- 4. MODALS & OVERLAYS                           -->
+<!-- ============================================== -->
+<!-- DEPARTMENTS COMMAND PALETTE (Popover / Dialog) -->
+<div class="hidden fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-start justify-center pt-20 px-4" id="dept-command-palette" onclick="closePaletteOnBackdrop(event)">
+<div class="w-full max-w-xl bg-white rounded-xl border border-line shadow-floating-lg overflow-hidden flex flex-col max-h-[819px] animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+<!-- Palette Search Header -->
+<div class="p-3 border-b border-line flex items-center gap-2.5 bg-surface">
+<i class="w-4 h-4 text-ink" data-lucide="building-2"></i>
+<input class="w-full text-xs font-sans text-ink placeholder:text-muted bg-transparent focus:outline-none" id="palette-search-input" onkeyup="filterDeptServices()" placeholder="Cari 10 jabatan atau perkhidmatan spesifik (cth: JPJ, Cukai, Parit)..." type="text"/>
+<kbd class="px-1.5 py-0.5 bg-white border border-line rounded text-[10px] font-mono text-muted shadow-sm">ESC</kbd>
+</div>
+<!-- 10 Malaysian Departments List with Official Color Dots & Active Cases -->
+<div class="flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-line/60" id="palette-departments-list">
+<!-- 1. Local Government (MBPJ / PBT) -->
+<div class="pt-1 first:pt-0 dept-item" data-name="Kerajaan Tempatan PBT MBPJ DBKL Parit Sampah Cukai Pintu">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kerajaan Tempatan (PBT)', '#0F766E')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-localgov shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kerajaan Tempatan &amp; PBT</span>
+<span class="text-[10px] font-mono text-muted">(MBPJ, DBKL, MBSA)</span>
+</div>
+<div class="text-[11px] text-muted">Aduan parit, jalan berlubang, sisa domestik, lesen perniagaan</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">1,240 kes</span>
+<div class="text-[10px] text-status-success font-mono">Disasarkan</div>
+</div>
+</button>
+</div>
+<!-- 2. Road Transport (JPJ) -->
+<div class="pt-1 dept-item" data-name="JPJ Jabatan Pengangkutan Jalan Lesen Memandu Cukai Jalan Roadtax Kenderaan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Pengangkutan Jalan (JPJ)', '#EA580C')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-jpj shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Jabatan Pengangkutan Jalan (JPJ)</span>
+</div>
+<div class="text-[11px] text-muted">Pembaharuan lesen memandu, cukai jalan digital, pertukaran hak milik</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">854 kes</span>
+<div class="text-[10px] text-muted font-mono">Pantas</div>
+</div>
+</button>
+</div>
+<!-- 3. Health (KKM) -->
+<div class="pt-1 dept-item" data-name="Kesihatan KKM Klinik Hospital Temujanji Ubat Rawatan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kesihatan (KKM)', '#DC2626')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-health shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kementerian Kesihatan (KKM)</span>
+</div>
+<div class="text-[11px] text-muted">Temujanji klinik kesihatan, rekod imunisasi, bekalan ubat pos</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">620 kes</span>
+</div>
+</button>
+</div>
+<!-- 4. Inland Revenue (LHDN) -->
+<div class="pt-1 dept-item" data-name="LHDN Lembaga Hasil Dalam Negeri Cukai Pendapatan e-Filing Rebat">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Lembaga Hasil (LHDN)', '#CA8A04')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-lhdn shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Lembaga Hasil Dalam Negeri (LHDN)</span>
+</div>
+<div class="text-[11px] text-muted">Penyerahan e-Filing, rebat pelepasan cukai, bayaran ansuran</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">415 kes</span>
+</div>
+</button>
+</div>
+<!-- 5. Police / Home Affairs (PDRM / KDN) -->
+<div class="pt-1 dept-item" data-name="Polis PDRM KDN Keselamatan Saman Trafik Laporan Polis">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Polis Diraja Malaysia (PDRM)', '#1E3A8A')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-police shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Polis &amp; Keselamatan (PDRM / KDN)</span>
+</div>
+<div class="text-[11px] text-muted">Semakan saman trafik, aduan jenayah siber, laporan komuniti</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">310 kes</span>
+</div>
+</button>
+</div>
+<!-- 6. Immigration (JIM) -->
+<div class="pt-1 dept-item" data-name="Imigresen JIM Pasport Visa Pas Lawatan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Jabatan Imigresen (JIM)', '#7C3AED')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-immigration shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Jabatan Imigresen Malaysia (JIM)</span>
+</div>
+<div class="text-[11px] text-muted">Permohonan &amp; pembaharuan pasport Malaysia, visa perjalanan</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">295 kes</span>
+</div>
+</button>
+</div>
+<!-- 7. Social Welfare (JKM) -->
+<div class="pt-1 dept-item" data-name="Kebajikan JKM Bantuan Kanak-kanak Warga Emas OKU">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kebajikan Masyarakat (JKM)', '#DB2777')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-jkm shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kebajikan Masyarakat (JKM)</span>
+</div>
+<div class="text-[11px] text-muted">Bantuan kewangan bulanan, pendaftaran kad OKU, bantuan bencana</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">188 kes</span>
+</div>
+</button>
+</div>
+<!-- 8. Education (KPM) -->
+<div class="pt-1 dept-item" data-name="Pendidikan KPM Sekolah Biasiswa Peperiksaan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kementerian Pendidikan (KPM)', '#2563EB')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-education shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kementerian Pendidikan (KPM)</span>
+</div>
+<div class="text-[11px] text-muted">Pertukaran sekolah anak, semakan peperiksaan awam, permohonan asrama</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">142 kes</span>
+</div>
+</button>
+</div>
+<!-- 9. Agriculture & Environment (KPKM / NRECC) -->
+<div class="pt-1 dept-item" data-name="Pertanian Alam Sekitar Sungai Banjir Saliran Alam">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Pertanian &amp; Alam Sekitar', '#16A34A')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-agri shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Pertanian &amp; Alam Sekitar (JPS / JAS)</span>
+</div>
+<div class="text-[11px] text-muted">Pemantauan aras air sungai, aduan pencemaran udara/sungai, bantuan subsidi baja</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">96 kes</span>
+</div>
+</button>
+</div>
+<!-- 10. Cross-Agency (Rentang Agensi) -->
+<div class="pt-1 dept-item" data-name="Rentang Agensi Cross-Agency Pelbagai Bantuan Banjir Bersepadu">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Rentang Agensi (Bersepadu)', '#475569')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-cross shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Rentang Agensi (Pusat Kawalan)</span>
+</div>
+<div class="text-[11px] text-muted">Pengurusan bencana bersepadu, pemindahan mangsa, bantuan serentak</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">54 kes</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Palette Footer -->
+<div class="p-2.5 bg-surface border-t border-line text-[11px] font-mono text-muted flex items-center justify-between">
+<span>Pilih jabatan untuk menyematkannya sebagai sasaran permohonan seterusnya.</span>
+<span>10 Agensi Berdaftar</span>
+</div>
+</div>
+</div>
+<!-- SCRIPT FOR DRAG-RESIZING, DOUBLE-CLICK RESET, COLLAPSE RAIL, BILINGUAL DICTIONARY -->
+<script>
+    lucide.createIcons();
+
+    const sidebar = document.getElementById('app-sidebar');
+    const dragHandle = document.getElementById('sidebar-drag-handle');
+    const scrollableContent = document.getElementById('sidebar-scrollable-content');
+    const topSection = document.getElementById('sidebar-top-section');
+    const footerSection = document.getElementById('sidebar-footer');
+    const railCompact = document.getElementById('rail-compact-content');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+
+    let isResizing = false;
+    let isCollapsed = false;
+    const DEFAULT_WIDTH = 272;
+    const MIN_WIDTH = 220;
+    const MAX_WIDTH = 420;
+    const RAIL_WIDTH = 64;
+
+    let currentWidth = parseInt(localStorage.getItem('mytadbir_sidebar_width') || DEFAULT_WIDTH);
+    sidebar.style.width = currentWidth + 'px';
+
+    dragHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      document.body.classList.add('sidebar-resizing');
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    function onMouseMove(e) {
+      if (!isResizing) return;
+      let newWidth = e.clientX;
+      if (newWidth < MIN_WIDTH) newWidth = MIN_WIDTH;
+      if (newWidth > MAX_WIDTH) newWidth = MAX_WIDTH;
+      sidebar.style.width = newWidth + 'px';
+      currentWidth = newWidth;
+    }
+
+    function onMouseUp() {
+      if (isResizing) {
+        isResizing = false;
+        document.body.classList.remove('sidebar-resizing');
+        localStorage.setItem('mytadbir_sidebar_width', currentWidth);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+    }
+
+    dragHandle.addEventListener('dblclick', () => {
+      sidebar.style.width = DEFAULT_WIDTH + 'px';
+      currentWidth = DEFAULT_WIDTH;
+      localStorage.setItem('mytadbir_sidebar_width', DEFAULT_WIDTH);
+      if (isCollapsed) uncollapseSidebar();
+    });
+
+    toggleSidebarBtn.addEventListener('click', () => {
+      if (isCollapsed) {
+        uncollapseSidebar();
+      } else {
+        collapseSidebar();
+      }
+    });
+
+    function collapseSidebar() {
+      isCollapsed = true;
+      sidebar.style.width = RAIL_WIDTH + 'px';
+      topSection.classList.add('hidden');
+      scrollableContent.classList.add('hidden');
+      footerSection.classList.add('hidden');
+      railCompact.classList.remove('hidden');
+      railCompact.classList.add('flex');
+    }
+
+    function uncollapseSidebar() {
+      isCollapsed = false;
+      sidebar.style.width = currentWidth + 'px';
+      topSection.classList.remove('hidden');
+      scrollableContent.classList.remove('hidden');
+      footerSection.classList.remove('hidden');
+      railCompact.classList.add('hidden');
+      railCompact.classList.remove('flex');
+    }
+
+    function toggleGroup(groupId, chevronId) {
+      const group = document.getElementById(groupId);
+      const chevron = document.getElementById(chevronId);
+      if (group.classList.contains('hidden')) {
+        group.classList.remove('hidden');
+        chevron.classList.remove('rotate-180-custom');
+      } else {
+        group.classList.add('hidden');
+        chevron.classList.add('rotate-180-custom');
+      }
+    }
+
+    const tracePanel = document.getElementById('agent-trace-panel');
+    let rightPanelOpen = true;
+    function toggleRightPanel() {
+      rightPanelOpen = !rightPanelOpen;
+      if (rightPanelOpen) {
+        tracePanel.classList.remove('hidden');
+      } else {
+        tracePanel.classList.add('hidden');
+      }
+    }
+
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    const userPopover = document.getElementById('user-popover-menu');
+    function toggleUserMenu(event) {
+      event.stopPropagation();
+      userPopover.classList.toggle('hidden');
+    }
+    document.addEventListener('click', (e) => {
+      if (!userPopover.contains(e.target) && !userMenuBtn.contains(e.target)) {
+        userPopover.classList.add('hidden');
+      }
+    });
+
+    const deptPalette = document.getElementById('dept-command-palette');
+    function toggleDeptPalette(e) {
+      if (e) e.stopPropagation();
+      deptPalette.classList.toggle('hidden');
+      if (!deptPalette.classList.contains('hidden')) {
+        setTimeout(() => document.getElementById('palette-search-input').focus(), 50);
+      }
+    }
+    function closePaletteOnBackdrop(e) {
+      deptPalette.classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !deptPalette.classList.contains('hidden')) {
+        deptPalette.classList.add('hidden');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        toggleDeptPalette();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        alert('Permintaan Baharu dimulakan');
+      }
+    });
+
+    function selectDepartment(deptName, color) {
+      deptPalette.classList.add('hidden');
+      alert(`Jabatan "${deptName}" telah disematkan untuk permohonan ini.`);
+    }
+
+    function filterDeptServices() {
+      const q = document.getElementById('palette-search-input').value.toLowerCase();
+      const items = document.querySelectorAll('.dept-item');
+      items.forEach(item => {
+        const text = item.getAttribute('data-name').toLowerCase();
+        if (text.includes(q)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    function setRole(role) {
+      const citizenBtn = document.getElementById('role-citizen-btn');
+      const officerBtn = document.getElementById('role-officer-btn');
+      const approvalNav = document.getElementById('nav-approval-queue');
+      const auditNav = document.getElementById('nav-audit-trail');
+      const officerBadge = document.getElementById('badge-officer-only');
+
+      if (role === 'citizen') {
+        citizenBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        officerBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+        approvalNav.classList.add('hidden');
+        auditNav.classList.add('hidden');
+        officerBadge.classList.add('hidden');
+      } else {
+        officerBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        citizenBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+        approvalNav.classList.remove('hidden');
+        auditNav.classList.remove('hidden');
+        officerBadge.classList.remove('hidden');
+      }
+    }
+
+    const i18n = {
+      BM: {
+        newRequest: "Permintaan Baharu",
+        searchPlaceholder: "Cari kes & perbualan...",
+        commands: "Arahan & Templat",
+        departments: "Jabatan Kerajaan",
+        templates: "Templat Pantas",
+        trackCase: "Jejak Kes Mengikut ID",
+        activity: "Aktiviti Saya",
+        myCases: "Kes Saya",
+        actionCentre: "Pusat Tindakan",
+        payments: "Bayaran",
+        documents: "Dokumen",
+        calendar: "Kalendar",
+        notifications: "Pemberitahuan",
+        liveViews: "Paparan Langsung",
+        serviceMap: "Peta Perkhidmatan",
+        impactDashboard: "Papan Pemuka Impak",
+        governance: "Tadbir Urus",
+        approvalQueue: "Giliran Kelulusan",
+        policyLibrary: "Pusat Dasar & Akta",
+        auditTrail: "Jejak Audit Berantai",
+        conversations: "Perbualan",
+        pinned: "Dipin",
+        today: "Hari Ini",
+        yesterday: "Semalam",
+        prev7days: "7 Hari Lepas",
+        sendBtn: "Hantar",
+        caseStatus: "Dalam Proses",
+        headerTitle: "Pusat Tindakan"
+      },
+      EN: {
+        newRequest: "New Request",
+        searchPlaceholder: "Search cases & chats...",
+        commands: "Commands & Templates",
+        departments: "Departments",
+        templates: "Quick Templates",
+        trackCase: "Track a Case by ID",
+        activity: "My Activity",
+        myCases: "My Cases",
+        actionCentre: "Action Centre",
+        payments: "Payments",
+        documents: "Documents",
+        calendar: "Calendar",
+        notifications: "Notifications",
+        liveViews: "Live Views",
+        serviceMap: "Service Map",
+        impactDashboard: "Impact Dashboard",
+        governance: "Governance",
+        approvalQueue: "Approval Queue",
+        policyLibrary: "Policy Library",
+        auditTrail: "Audit Trail",
+        conversations: "Conversations",
+        pinned: "Pinned",
+        today: "Today",
+        yesterday: "Yesterday",
+        prev7days: "Previous 7 Days",
+        sendBtn: "Send",
+        caseStatus: "In Progress",
+        headerTitle: "Action Centre"
+      }
+    };
+
+    function setLang(lang) {
+      const bmBtn = document.getElementById('lang-bm');
+      const enBtn = document.getElementById('lang-en');
+      if (lang === 'BM') {
+        bmBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        enBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+      } else {
+        enBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        bmBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+      }
+
+      const dict = i18n[lang];
+      document.getElementById('txt-new-request').textContent = dict.newRequest;
+      document.getElementById('sidebar-search-input').placeholder = dict.searchPlaceholder;
+      document.getElementById('lbl-commands').textContent = dict.commands;
+      document.getElementById('txt-departments-nav').textContent = dict.departments;
+      document.getElementById('txt-templates').textContent = dict.templates;
+      document.getElementById('txt-track-case').textContent = dict.trackCase;
+      document.getElementById('lbl-activity').textContent = dict.activity;
+      document.getElementById('txt-my-cases').textContent = dict.myCases;
+      const actionCentreEl = document.getElementById('txt-action-centre');
+      if (actionCentreEl) actionCentreEl.textContent = dict.actionCentre;
+      document.getElementById('txt-payments').textContent = dict.payments;
+      document.getElementById('txt-documents').textContent = dict.documents;
+      document.getElementById('txt-calendar').textContent = dict.calendar;
+      document.getElementById('txt-notifications').textContent = dict.notifications;
+      document.getElementById('lbl-live-views').textContent = dict.liveViews;
+      document.getElementById('txt-service-map').textContent = dict.serviceMap;
+      document.getElementById('txt-impact-dashboard').textContent = dict.impactDashboard;
+      document.getElementById('lbl-governance').textContent = dict.governance;
+      document.getElementById('txt-approval-queue').textContent = dict.approvalQueue;
+      document.getElementById('txt-policy-library').textContent = dict.policyLibrary;
+      document.getElementById('txt-audit-trail').textContent = dict.auditTrail;
+      document.getElementById('lbl-conversations').textContent = dict.conversations;
+      document.getElementById('lbl-pinned').textContent = dict.pinned;
+      document.getElementById('lbl-today').textContent = dict.today;
+      document.getElementById('lbl-yesterday').textContent = dict.yesterday;
+      document.getElementById('lbl-prev7days').textContent = dict.prev7days;
+      document.getElementById('case-status-text').textContent = dict.caseStatus;
+      document.getElementById('header-page-title').textContent = dict.headerTitle;
+    }
+  </script>
+</body></html>

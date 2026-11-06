@@ -86,38 +86,103 @@ function Login({ t, lang, setLang, onIn }) {
   </div>`;
 }
 
-// ---------------------------------------------------------------- sidebar
-function Sidebar({ t, lang, user, view, setView, catalog, cases, threads, pins, togglePin, openThread, newRequest, launchDept, logout, theme, setTheme }) {
-  const [open, setOpen] = useState(store.get("mt-groups", { commands: true, activity: true, live: true, gov: true, conv: true }));
-  const tog = (k) => { const n = { ...open, [k]: !open[k] }; setOpen(n); store.set("mt-groups", n); };
-  const countBy = useMemo(() => cases.reduce((m, c) => { if (c.status !== "done") m[c.current_department] = (m[c.current_department] || 0) + 1; return m; }, {}), [cases]);
-  const active = cases.filter((c) => c.status !== "done").length;
-  const Nav = (k, ico, cnt) => html`<button class=${"nav" + (view === k ? " on" : "")} onClick=${() => setView(k)}><span class="ico">${ico}</span>${t[k]}${cnt ? html`<span class="cnt">${cnt}</span>` : null}</button>`;
-  const Grp = (k, label, kids) => html`<div class="grp"><button class="grp-h" onClick=${() => tog(k)} aria-expanded=${open[k]}>${label}<svg class=${"chev" + (open[k] ? " open" : "")} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>${open[k] && kids}</div>`;
-  const pinned = threads.filter((x) => pins.includes(x.thread_id)); const rest = threads.filter((x) => !pins.includes(x.thread_id));
-  const Hist = (th) => html`<div style=${{ display: "flex", alignItems: "center" }}><button class="hist" onClick=${() => openThread(th.thread_id)}>${th.title || th.thread_id}<small>${th.cases.map((c) => c.case_id).join(", ") || th.thread_id}</small></button><button class="icon-btn" title="Pin" onClick=${() => togglePin(th.thread_id)}>${pins.includes(th.thread_id) ? "★" : "☆"}</button></div>`;
+// ---------------------------------------------------------------- icons (Lucide, currentColor)
+const _ic = {};
+function Icon({ n, cls = "" }) {
+  const node = window.lucide && window.lucide[n];
+  if (!node) return null;
+  const build = (el, k) => React.createElement(el[0], { key: k, ...el[1] }, ...(el[2] || []).map(build));
+  const [, attrs, kids] = node;
+  return React.createElement("svg", { ...attrs, width: undefined, height: undefined, className: "ic " + cls, "aria-hidden": "true" }, ...(kids || []).map(build));
+}
+const I = (n, cls) => html`<${Icon} n=${n} cls=${cls} />`;
+const DEPT_LUCIDE = { health: "HeartPulse", education: "GraduationCap", local_gov: "Building2", immigration: "Plane", road_transport: "Car",
+  inland_revenue: "Landmark", social_welfare: "HandHeart", police_home: "Shield", agri_env: "Leaf", cross_agency: "Network" };
+const DEPT_SHORT = { health: ["Health", "Kesihatan"], education: ["Education", "Pendidikan"], local_gov: ["Local Gov", "PBT"], immigration: ["Immigration", "Imigresen"],
+  road_transport: ["JPJ", "JPJ"], inland_revenue: ["LHDN", "LHDN"], social_welfare: ["JKM", "JKM"], police_home: ["PDRM / KDN", "PDRM / KDN"], agri_env: ["Agri & Env", "Pertanian & AS"], cross_agency: ["Cross-agency", "Rentas agensi"] };
+const dcol = (k) => `var(--d-${k}, var(--ink))`;
+const DChip = (k, lang) => html`<span class="dchip" style=${{ "--dc": dcol(k) }}>${I(DEPT_LUCIDE[k] || "Building2")}${(DEPT_SHORT[k] || [k, k])[lang === "bm" ? 1 : 0]}</span>`;
+
+// ---------------------------------------------------------------- departments picker (one button, searchable)
+function DeptPicker({ lang, catalog, cases, anchor, onPick, onClose }) {
+  const [q, setQ] = useState(""); const [open, setOpen] = useState(null); const ref = useRef(null);
+  useEffect(() => { const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); }; setTimeout(() => document.addEventListener("mousedown", h)); return () => document.removeEventListener("mousedown", h); }, []);
+  const r = anchor?.getBoundingClientRect(); const B = lang === "bm";
+  const style = r && window.innerWidth > 900 ? { left: r.right + 8, top: Math.max(8, Math.min(r.top - 40, window.innerHeight - 520)) } : { left: "50%", top: 70, transform: "translateX(-50%)" };
+  const count = (k) => cases.filter((c) => c.current_department === k && c.status !== "done").length;
+  const ql = q.toLowerCase();
+  const rows = catalog.filter((d) => !q || (d.en + d.bm + d.agencies + d.subs.map((s) => s.en + s.bm).join(" ")).toLowerCase().includes(ql));
+  return html`<div class="dept-pop" ref=${ref} style=${style} role="dialog" aria-label=${B ? "Jabatan" : "Departments"}>
+    <input autofocus placeholder=${B ? "Cari jabatan atau perkhidmatan…" : "Search departments or services…"} value=${q} onInput=${(e) => setQ(e.target.value)} />
+    ${rows.map((d) => html`<div key=${d.key}>
+      <button class=${"dept-row" + (open === d.key ? " on" : "")} onClick=${() => setOpen(open === d.key ? null : d.key)}>
+        <span class="ddot" style=${{ background: dcol(d.key) }}></span>
+        <span style=${{ flex: 1, minWidth: 0 }}><b>${B ? d.bm : d.en}</b><small>${d.agencies} · ${d.subs.length} ${B ? "perkhidmatan" : "services"}</small></span>
+        ${count(d.key) ? html`<span class="pill">${count(d.key)} ${B ? "aktif" : "active"}</span>` : null}
+        ${I("ChevronDown", open === d.key || q ? "chev open" : "chev")}</button>
+      ${(open === d.key || q) && html`<div class="dept-subs">
+        <button onClick=${() => onPick(d.key, null)}>${B ? "Mana-mana perkhidmatan" : "Any service"}</button>
+        ${d.subs.filter((s) => !q || (s.en + s.bm).toLowerCase().includes(ql) || (d.en + d.bm).toLowerCase().includes(ql)).map((s) => html`<button key=${s.key} onClick=${() => onPick(d.key, s)}>${B ? s.bm : s.en}</button>`)}</div>`}
+    </div>`)}
+  </div>`;
+}
+
+// ---------------------------------------------------------------- sidebar (resizable, collapses to a rail)
+function groupByDay(threads, B) {
+  const day = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+  const today = day(Date.now()), out = {};
+  threads.forEach((th) => {
+    const diff = (today - day(th.created_at)) / 864e5;
+    const k = diff < 1 ? (B ? "Hari ini" : "Today") : diff < 2 ? (B ? "Semalam" : "Yesterday") : diff < 8 ? (B ? "7 hari lepas" : "Previous 7 days") : (B ? "Lebih lama" : "Older");
+    (out[k] = out[k] || []).push(th);
+  });
+  return Object.entries(out);
+}
+
+function Sidebar({ t, lang, user, view, setView, catalog, cases, threads, pins, togglePin, openThread, newRequest, launchDept, logout, theme, setTheme, rail, setRail, approvals, unread, pendingPay }) {
+  const [open, setOpen] = useState(store.get("mt-groups2", { commands: true, activity: true, live: true, gov: true, conv: true }));
+  const [picker, setPicker] = useState(false); const [q, setQ] = useState(""); const pickBtn = useRef(null);
+  const tog = (k) => { const n = { ...open, [k]: !open[k] }; setOpen(n); store.set("mt-groups2", n); };
+  const B = lang === "bm";
+  const active = cases.filter((c) => !["done", "failed"].includes(c.status)).length;
+  const actions = approvals.filter((a) => a.status === "pending").length;
+  const Nav = (k, ico, label, badge) => html`<button class=${"nav" + (view === k ? " on" : "")} title=${label} onClick=${() => setView(k)}>${I(ico)}<span class="lbl">${label}</span>${badge || null}</button>`;
+  const Cnt = (n, cls = "") => (n ? html`<span class=${"cnt " + cls}>${n}</span>` : null);
+  const Grp = (k, label, kids, cls = "") => html`<div class=${"grp " + cls}><button class="grp-h" onClick=${() => tog(k)} aria-expanded=${open[k]}><span>${label}</span>${I("ChevronDown", "chev" + (open[k] ? " open" : ""))}</button>${open[k] && kids}</div>`;
+  const ql = q.toLowerCase();
+  const list = threads.filter((x) => !q || (x.title + x.cases.map((c) => c.case_id).join(" ")).toLowerCase().includes(ql));
+  const pinned = list.filter((x) => pins.includes(x.thread_id)); const rest = list.filter((x) => !pins.includes(x.thread_id));
+  const Hist = (th) => html`<div style=${{ display: "flex", alignItems: "center" }} key=${th.thread_id}><button class="hist" onClick=${() => openThread(th.thread_id)}>${th.title || th.thread_id}
+      <small>${th.cases.map((c) => html`<span key=${c.case_id}><span class="ddot" style=${{ background: dcol(c.department), width: 6, height: 6, marginRight: 4 }}></span>${c.case_id} </span>`)}</small></button>
+    <button class="icon-btn" title=${B ? "Semat" : "Pin"} onClick=${() => togglePin(th.thread_id)}>${I(pins.includes(th.thread_id) ? "PinOff" : "Pin")}</button></div>`;
   return html`<aside class="side">
-    <div class="brand"><div class="brand-mark">MT</div><div><b>MyTadbir</b><small>${t.tagline}</small></div></div>
-    <button class="new-btn" onClick=${newRequest}>＋ ${t.newReq}</button>
+    <div class="brand"><div class="brand-l"><div class="brand-mark">M</div><b>MyTadbir</b></div>
+      <button class="icon-btn keep" title=${rail ? (B ? "Kembangkan" : "Expand") : (B ? "Kecilkan" : "Collapse")} onClick=${() => setRail(!rail)}>${I(rail ? "PanelLeftOpen" : "PanelLeftClose")}</button></div>
+    <button class="new-btn" onClick=${newRequest} title=${t.newReq}><span style=${{ display: "inline-flex", gap: 8, alignItems: "center" }}>${I("Plus")}<span class="lbl">${t.newReq}</span></span><kbd>Ctrl N</kbd></button>
+    <label class="side-search">${I("Search")}<input placeholder=${B ? "Cari kes & perbualan" : "Search cases and chats"} value=${q} onInput=${(e) => setQ(e.target.value)} /></label>
     <div class="side-scroll">
-      ${Grp("commands", t.g_commands, html`
-        <div class="launch">${catalog.map((d) => html`<button class="tile" key=${d.key} title=${d.agencies} onClick=${() => launchDept(d.key)}>
-          <b>${DEPT_ICON[d.key]} ${lang === "bm" ? d.bm : d.en}</b><span>${d.subs.length} ${lang === "bm" ? "modul" : "modules"}${countBy[d.key] ? " · " + countBy[d.key] + (lang === "bm" ? " aktif" : " active") : ""}</span></button>`)}</div>
-        ${Nav("console", "⌘")}${Nav("search", "⌕")}`)}
-      ${Grp("activity", t.g_activity, html`${Nav("cases", "▤", active)}${Nav("payments", "＄")}${Nav("documents", "🗎")}${Nav("calendar", "▦")}${Nav("inbox", "✉")}`)}
-      ${Grp("live", t.g_live, html`${Nav("map", "⌖")}${Nav("impact", "▲")}`)}
-      ${Grp("gov", t.g_gov, html`${Nav("approvals", "✔")}${Nav("policy", "§")}${Nav("audit", "⛓")}`)}
-      ${Grp("conv", t.g_conv, html`${pinned.length ? html`<div class="grp-h" style=${{ cursor: "default" }}>${t.pinned}</div>${pinned.map(Hist)}` : null}
-        <div class="grp-h" style=${{ cursor: "default" }}>${t.history}</div>${rest.length ? rest.slice(0, 30).map(Hist) : html`<div class="hist" style=${{ color: "var(--side-muted)" }}>${t.none}</div>`}`)}
+      ${Grp("commands", B ? "Arahan" : "Commands", html`
+        <button ref=${pickBtn} class=${"nav" + (picker ? " on" : "")} title=${B ? "Jabatan" : "Departments"} onClick=${() => setPicker(!picker)}>${I("LayoutGrid")}<span class="lbl">${B ? "Jabatan" : "Departments"}</span><span class="cnt">10</span></button>
+        ${Nav("console", "MessageSquare", t.console)}
+        ${Nav("search", "Hash", B ? "Jejak kes mengikut ID" : "Track a case by ID")}`)}
+      ${Grp("activity", t.g_activity, html`${Nav("cases", "FolderOpen", t.cases, Cnt(active))}${Nav("actions", "CircleCheck", B ? "Pusat tindakan" : "Action centre", Cnt(actions, "warn"))}
+        ${Nav("payments", "CreditCard", B ? "Bayaran" : "Payments", pendingPay ? html`<span class="cnt warn">${pendingPay} ${B ? "tertunggak" : "due"}</span>` : null)}${Nav("documents", "FileText", B ? "Dokumen" : "Documents")}
+        ${Nav("calendar", "CalendarDays", t.calendar)}${Nav("inbox", "Bell", t.inbox, unread ? html`<span class="cnt dot"></span>` : null)}`)}
+      ${Grp("live", t.g_live, html`${Nav("map", "Map", t.map)}${Nav("impact", "ChartColumn", t.impact)}`)}
+      ${Grp("gov", B ? "Ketelusan" : "Transparency", html`${Nav("policy", "BookOpen", t.policy)}${Nav("audit", "ShieldCheck", t.audit)}`)}
+      ${Grp("conv", t.g_conv, html`${pinned.length ? html`<div class="grp-h" style=${{ cursor: "default" }}>${I("Pin")} ${t.pinned}</div>${pinned.map(Hist)}` : null}
+        ${groupByDay(rest, B).map(([k, ths]) => html`<div key=${k}><div class="grp-h" style=${{ cursor: "default" }}><span>${k}</span></div>${ths.slice(0, 20).map(Hist)}</div>`)}
+        ${!list.length && html`<div class="hist" style=${{ color: "var(--muted)" }}>${t.none}</div>`}`, "grp-conv")}
     </div>
     <div class="side-foot">
-      <div class="avatar">${user.name.split(" ").map((x) => x[0]).slice(0, 2).join("")}</div>
-      <div class="who"><b>${user.name}</b>${user.verified ? html`<span class="badge-ok">✔ ${t.verified}</span>` : html`<span class="badge-ok" style=${{ color: "var(--side-muted)" }}>${t.officerMode}</span>`}</div>
-      <button class="icon-btn" title=${t.settings} onClick=${() => setView("settings")}>⚙</button>
-      <button class="icon-btn" title="Theme" onClick=${() => setTheme(theme === "dark" ? "light" : "dark")}>${theme === "dark" ? "☀" : "☾"}</button>
-      <button class="icon-btn" title=${t.help} onClick=${() => setView("help")}>?</button>
-      <button class="icon-btn" title=${t.signout} onClick=${logout}>⏻</button>
+      <div class="avatar">${user.name.split(" ").filter((x) => /^[A-Z]/.test(x)).map((x) => x[0]).slice(0, 2).join("")}</div>
+      <div class="who"><b>${user.name}</b>${user.verified && html`<span class="badge-ok">${I("BadgeCheck")} ${t.verified}</span>`}</div>
+      <button class="icon-btn" title=${t.settings} onClick=${() => setView("settings")}>${I("Settings")}</button>
+      <button class="icon-btn" title="Theme" onClick=${() => setTheme(theme === "dark" ? "light" : "dark")}>${I(theme === "dark" ? "Sun" : "Moon")}</button>
+      <button class="icon-btn keep" title=${t.signout} onClick=${logout}>${I("LogOut")}</button>
     </div>
+    ${picker && html`<${DeptPicker} lang=${lang} catalog=${catalog} cases=${cases} anchor=${pickBtn.current} onClose=${() => setPicker(false)}
+      onPick=${(k, s) => { setPicker(false); launchDept(k, s); }} />`}
   </aside>`;
 }
 
@@ -142,6 +207,8 @@ function TracePanel({ t, lang, events, threadId, onClose }) {
 }
 
 // ---------------------------------------------------------------- console
+const LEVEL_NAME = { 1: ["Information", "Maklumat"], 2: ["Routine", "Rutin"], 3: ["Assessment", "Penilaian"], 4: ["Legal judgement", "Pertimbangan undang-undang"], 5: ["Safety-critical", "Kritikal keselamatan"] };
+const Level = (n, lang, why = []) => html`<span class=${"level l" + n} title=${(why || []).join(" · ")}><i>${[1, 2, 3, 4, 5].map((k) => html`<b key=${k} class=${k <= n ? "on" : ""}></b>`)}</i>${lang === "bm" ? "Tahap" : "Level"} ${n} · ${LEVEL_NAME[n][lang === "bm" ? 1 : 0]}</span>`;
 function CaseCard({ t, lang, c, events, user, onDecide, approvals }) {
   const evs = events.filter((e) => e.case_id === c.case_id);
   const steps = evs.filter((e) => ["dispatch", "handoff", "inspected", "api_call", "sql_write", "retrieved", "reasoned", "priority", "artifact", "notified", "paused", "decision", "reused"].includes(e.event));
@@ -153,9 +220,9 @@ function CaseCard({ t, lang, c, events, user, onDecide, approvals }) {
   const chain = c.chain && c.chain.length ? c.chain : [c.current_department];
   return html`<div class="card">
     <div class="card-h"><span class="eyebrow">${t.caseId}</span><b class="mono" style=${{ fontSize: 14 }}>${c.case_id}</b>
-      <span class=${"pill " + (STATUS_PILL[c.status] || "")}>${c.status.replace("_", " ")}</span>${c.verify_flag ? html`<span class="pill warn">${t.verify}</span>` : null}</div>
+      <span class=${"pill " + (STATUS_PILL[c.status] || "")}>${c.status.replace("_", " ")}</span>${c.verify_flag ? html`<span class="pill warn">${t.verify}</span>` : null}${c.level ? Level(c.level, lang, c.level_reasons) : null}</div>
     <div class="muted" style=${{ fontSize: 13.5 }}>“${c.intent}”</div>
-    <div class="chain">${chain.map((d, i) => html`${i > 0 ? html`<span class="arrow">→</span>` : null}<span class="pill accent">${DEPT_ICON[d]} ${d}</span>`)}</div>
+    <div class="chain">${chain.map((d, i) => html`${i > 0 ? html`<span class="arrow">→</span>` : null}${DChip(d, lang)}`)}</div>
     <ul class="steps">${steps.map((e, i) => html`<li key=${i} class=${i === steps.length - 1 && c.status === "running" ? "run" : ""}><span class="s">${e.event === "paused" ? "⏸" : "✓"}</span><span>${describe(e, lang)}${modelOf(e) ? html` <span class="mono muted">(${modelOf(e)})</span>` : null}</span></li>`)}</ul>
     ${cites.length > 0 && html`<div style=${{ marginTop: 10 }}><span class="eyebrow">${t.citations}</span>
       ${cites.map((h) => html`<div class="cite"><a href=${h.url} target="_blank" rel="noopener">${lang === "bm" ? h.title_bm : h.title_en}</a>, ${lang === "bm" ? "ms" : "p."} ${h.page}<div class="muted">${h.excerpt.slice(0, 180)}…</div></div>`)}
@@ -187,7 +254,7 @@ function Console({ t, lang, user, catalog, thread, events, cases, approvals, sen
       ${!thread?.messages?.length && html`<div class="empty"><h2>${t.emptyTitle}</h2><p>${t.emptyBody}</p></div>`}
       ${(thread?.messages || []).map((m, i) => html`<div class="msg-user" key=${"m" + i}>${m.text}${m.previews.map((p) => html`<img src=${p} alt="" />`)}</div>`)}
       ${routerEv.map((e, i) => html`<div class="card" key=${"r" + i}><div class="card-h"><span class="pill agent">${t.router}</span><b>${(e.data.intents || []).length} ${lang === "bm" ? "niat dikesan" : "intent(s) found"}</b><span class="mono muted">${modelOf(e) || e.data.classifier}</span></div>
-        ${(e.data.intents || []).map((g) => html`<div class="intent"><span class="pill accent">${DEPT_ICON[g.department]} ${g.department}</span><span>${g.submodule}<div class="muted" style=${{ fontSize: 12.5 }}>${g.reason}</div></span>
+        ${(e.data.intents || []).map((g) => html`<div class="intent">${DChip(g.department, lang)}<span>${g.submodule}<div class="muted" style=${{ fontSize: 12.5 }}>${g.reason}</div></span>
           <span title=${t.confidence}><span class="conf"><i style=${{ width: Math.round(g.confidence * 100) + "%" }}></i></span><span class="mono">${Math.round(g.confidence * 100)}%</span></span></div>`)}
         ${events.filter((x) => x.event === "case_created" && x.data.order_note).map((x) => html`<div class="cite" style=${{ borderColor: "var(--warn)" }}><b>${t.order}:</b> ${x.data.order_note}</div>`)}</div>`)}
       ${clar.map((e, i) => html`<div class="card" key=${"c" + i}><div class="card-h"><span class="pill warn">${t.router}</span><b>${t.clarify}</b></div>${e.data.question}</div>`)}
@@ -237,31 +304,83 @@ function CasesView({ t, lang, cases, openThread, openAudit, query }) {
 }
 
 function PaymentsView({ t, lang }) {
-  const [rows] = useLoad("/api/payments");
-  const out = (rows || []).filter((p) => p.direction === "out" && p.status === "paid").reduce((s, p) => s + p.amount, 0);
-  const pend = (rows || []).filter((p) => p.status === "pending").reduce((s, p) => s + p.amount, 0);
-  const inn = (rows || []).filter((p) => p.direction === "in").reduce((s, p) => s + p.amount, 0);
-  return html`<div class="grid cols-4" style=${{ marginBottom: 14 }}>
-      <div class="stat"><b>${rm(out)}</b><span>${lang === "bm" ? "Dibayar kepada kerajaan" : "Paid to government"}</span></div>
-      <div class="stat"><b>${rm(pend)}</b><span>${lang === "bm" ? "Menunggu" : "Pending"}</span></div>
-      <div class="stat"><b>${rm(inn)}</b><span>${lang === "bm" ? "Diterima (bayaran balik / bantuan)" : "Received (refunds / aid)"}</span></div></div>
-    <${Table} empty=${t.none} rows=${rows || []} cols=${[
-      { h: t.date, v: (p) => fmtDate(p.created_at) }, { h: t.dept, v: (p) => DEPT_ICON[p.department] + " " + p.department },
-      { h: lang === "bm" ? "Butiran" : "Item", v: (p) => lang === "bm" ? p.description_bm : p.description_en },
+  const [rows] = useLoad("/api/payments"); const [dept, setDept] = useState(""); const [st, setSt] = useState("");
+  const B = lang === "bm"; const all = rows || [];
+  const sum = (f) => all.filter(f).reduce((s, p) => s + p.amount, 0);
+  const paid = sum((p) => p.direction === "out" && p.status === "paid"), pend = sum((p) => p.status === "pending"), inn = sum((p) => p.direction === "in");
+  const months = [...Array(6)].map((_, i) => { const d = new Date(); d.setMonth(d.getMonth() - 5 + i); return [d.getFullYear(), d.getMonth()]; });
+  const byMonth = months.map(([y, m]) => {
+    const seg = {}; all.filter((p) => p.direction === "out" && p.status === "paid" && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() === m)
+      .forEach((p) => { seg[p.department] = (seg[p.department] || 0) + p.amount; });
+    return { label: new Date(y, m, 1).toLocaleString(B ? "ms-MY" : "en-MY", { month: "short" }), seg, total: Object.values(seg).reduce((a, b) => a + b, 0) };
+  });
+  const max = Math.max(1, ...byMonth.map((m) => m.total));
+  const shown = all.filter((p) => (!dept || p.department === dept) && (!st || p.status === st));
+  const csv = "data:text/csv;charset=utf-8," + encodeURIComponent(["date,department,item,case,amount,status", ...shown.map((p) => [p.created_at, p.department, (B ? p.description_bm : p.description_en).replaceAll(",", " "), p.case_id || "", p.amount, p.status].join(","))].join("\n"));
+  const S = (v, en, bm, c) => html`<div class="stat" style=${{ "--sc": c }}><span>${B ? bm : en}</span><b>${v}</b></div>`;
+  return html`<div>
+    <div class="page-h"><div><h2>${B ? "Bayaran" : "Payments"}</h2><p>${B ? "Semua bayaran kepada dan daripada kerajaan, dalam satu lejar." : "Every payment to and from government, in one ledger."}</p></div>
+      <a class="btn" href=${csv} download="mytadbir-payments.csv">${I("Download")} ${B ? "Eksport CSV" : "Export CSV"}</a></div>
+    <div class="grid cols-4" style=${{ marginBottom: 16 }}>
+      ${S(rm(paid), "Paid", "Dibayar", "var(--good)")}${S(rm(pend), "Pending", "Tertunggak", "var(--warn)")}${S("+" + rm(inn), "Refunds & aid received", "Bayaran balik & bantuan", "var(--info)")}
+      ${S(all.length, "Transactions", "Transaksi", "var(--ink)")}</div>
+    ${pend > 0 && html`<div class="due" style=${{ marginBottom: 16 }}>${I("TriangleAlert")}<span style=${{ flex: 1 }}><b>${B ? "Bayaran menunggu pengesahan anda" : "A payment is waiting for your confirmation"}</b> · ${rm(pend)}</span></div>`}
+    <div class="card" style=${{ marginBottom: 16 }}><div class="card-h"><b>${B ? "Dibayar mengikut bulan" : "Paid by month"}</b><span class="muted" style=${{ fontSize: 12.5 }}>${B ? "warna = jabatan" : "colour = department"}</span></div>
+      <div class="bars">${byMonth.map((m) => html`<div class="b" key=${m.label} title=${rm(m.total)}>${Object.entries(m.seg).map(([d, v]) => html`<span key=${d} style=${{ height: (v / max) * 110 + "px", background: dcol(d) }}></span>`)}${!m.total ? html`<span style=${{ height: "2px", background: "var(--line)" }}></span>` : null}<small>${m.label}</small></div>`)}</div></div>
+    <div class="toolbar"><select value=${dept} onChange=${(e) => setDept(e.target.value)}><option value="">${t.dept}: ${B ? "semua" : "all"}</option>${[...new Set(all.map((p) => p.department))].map((d) => html`<option value=${d}>${(DEPT_SHORT[d] || [d])[B ? 1 : 0]}</option>`)}</select>
+      <select value=${st} onChange=${(e) => setSt(e.target.value)}><option value="">${t.status}: ${B ? "semua" : "all"}</option>${["paid", "pending", "refunded", "failed"].map((s) => html`<option>${s}</option>`)}</select></div>
+    <${Table} empty=${t.none} rows=${shown} cols=${[
+      { h: t.date, v: (p) => html`<span class="mono">${fmtDate(p.created_at)}</span>` }, { h: t.dept, v: (p) => DChip(p.department, lang) },
+      { h: B ? "Butiran" : "Item", v: (p) => B ? p.description_bm : p.description_en },
       { h: t.caseId, v: (p) => html`<span class="mono">${p.case_id || "-"}</span>` },
-      { h: t.amount, num: true, v: (p) => (p.direction === "in" ? "+" : "") + rm(p.amount) }, { h: t.status, v: (p) => Pill(p.status) },
-      { h: t.receipt, v: (p) => p.receipt ? html`<a href=${"/api/payments/" + p.id + "/receipt"} target="_blank">PDF</a>` : "-" },
-    ]} />`;
+      { h: t.amount, num: true, v: (p) => html`<span style=${{ color: p.direction === "in" ? "var(--good)" : "inherit", fontWeight: 600 }}>${(p.direction === "in" ? "+" : "") + rm(p.amount)}</span>` },
+      { h: t.status, v: (p) => Pill(p.status) },
+      { h: t.receipt, v: (p) => p.receipt ? html`<a class="btn" href=${"/api/payments/" + p.id + "/receipt"} target="_blank">${I("Receipt")} PDF</a>` : html`<span class="muted">-</span>` },
+    ]} /></div>`;
 }
 
-function DocumentsView({ t }) {
-  const [rows] = useLoad("/api/documents");
-  return html`<${Table} empty=${t.none} rows=${rows || []} cols=${[
-    { h: t.date, v: (d) => fmtDate(d.created_at) }, { h: "Type", v: (d) => html`<span class="pill">${d.kind.replace("_", " ")}</span>` },
-    { h: "Title", v: (d) => d.title }, { h: t.dept, v: (d) => d.department ? DEPT_ICON[d.department] + " " + d.department : "-" },
-    { h: t.caseId, v: (d) => html`<span class="mono">${d.case_id || "-"}</span>` },
-    { h: "", v: (d) => html`<a class="artifact" href=${"/api/documents/" + d.id + "/file"} target="_blank">${t.open}</a>` }]} />`;
+const FTYPE = (d) => d.kind === "receipt" ? ["rcpt", "Receipt"] : /\.(jpe?g|png|webp)$/i.test(d.title) ? ["img", "Image"] : d.kind === "work_ticket" || /\.pdf$/i.test(d.title) ? ["pdf", "FileText"] : ["doc", "File"];
+const KIND_LABEL = { upload: ["Your uploads", "Muat naik anda"], work_ticket: ["Work tickets", "Tiket kerja"], receipt: ["Receipts", "Resit"], brief: ["Briefs", "Ringkasan"], checklist: ["Checklists", "Senarai semak"], licence: ["Licences", "Lesen"] };
+
+function DocumentsView({ t, lang }) {
+  const [rows] = useLoad("/api/documents"); const B = lang === "bm";
+  const [kind, setKind] = useState(""); const [dept, setDept] = useState(""); const [tags, setTags] = useState([]); const [q, setQ] = useState(""); const [sel, setSel] = useState(null);
+  const all = rows || [];
+  const tagCount = {}; all.forEach((d) => (d.tags || []).filter((x) => !x.startsWith("kind:") && !x.startsWith("dept:")).forEach((x) => { tagCount[x] = (tagCount[x] || 0) + 1; }));
+  const shown = all.filter((d) => (!kind || d.kind === kind) && (!dept || d.department === dept) && tags.every((x) => (d.tags || []).includes(x))
+    && (!q || (d.title + d.case_id + (d.tags || []).join(" ")).toLowerCase().includes(q.toLowerCase())));
+  const cur = all.find((d) => d.id === sel) || shown[0];
+  const tagLabel = (x) => "#" + x.split(":")[1].replaceAll("_", "-");
+  const isImg = cur && /\.(jpe?g|png|webp)$/i.test(cur.title);
+  return html`<div>
+    <div class="page-h"><div><h2>${B ? "Dokumen" : "Documents"}</h2><p>${B ? "Setiap fail yang anda muat naik dan yang dijana oleh MyTadbir, difailkan mengikut tag." : "Every file you uploaded and every file MyTadbir produced, filed by tag."}</p></div></div>
+    <div class="docs">
+      <aside class="filters">
+        <div><span class="eyebrow">${B ? "Jenis" : "Type"}</span>
+          <button class=${"fbtn" + (!kind ? " on" : "")} onClick=${() => setKind("")}><span>${B ? "Semua" : "All"}</span><span class="mono">${all.length}</span></button>
+          ${Object.keys(KIND_LABEL).filter((k) => all.some((d) => d.kind === k)).map((k) => html`<button key=${k} class=${"fbtn" + (kind === k ? " on" : "")} onClick=${() => setKind(k)}><span>${KIND_LABEL[k][B ? 1 : 0]}</span><span class="mono">${all.filter((d) => d.kind === k).length}</span></button>`)}</div>
+        <div><span class="eyebrow">${t.dept}</span>
+          ${[...new Set(all.map((d) => d.department).filter(Boolean))].map((k) => html`<button key=${k} class=${"fbtn" + (dept === k ? " on" : "")} onClick=${() => setDept(dept === k ? "" : k)}><span style=${{ display: "inline-flex", gap: 6, alignItems: "center" }}><span class="ddot" style=${{ background: dcol(k) }}></span>${(DEPT_SHORT[k] || [k])[B ? 1 : 0]}</span><span class="mono">${all.filter((d) => d.department === k).length}</span></button>`)}</div>
+        <div><span class="eyebrow">Tag</span><div>${Object.entries(tagCount).sort((a, b) => b[1] - a[1]).slice(0, 16).map(([x, n]) => html`<button key=${x} class=${"tag" + (tags.includes(x) ? " on" : "")} style=${{ cursor: "pointer" }} onClick=${() => setTags(tags.includes(x) ? tags.filter((y) => y !== x) : [...tags, x])}>${tagLabel(x)} ${n}</button>`)}</div></div>
+      </aside>
+      <section style=${{ minWidth: 0 }}>
+        <div class="toolbar"><input placeholder=${B ? "Cari mengikut nama, tag atau ID kes…" : "Search by name, tag or case ID…"} value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
+        ${!shown.length ? html`<div class="empty">${t.none}</div>` : html`<div class="doc-grid">${shown.map((d) => { const [cls, ico] = FTYPE(d); return html`<div key=${d.id} class=${"doc-card" + (cur && cur.id === d.id ? " on" : "")} onClick=${() => setSel(d.id)}>
+          <div style=${{ display: "flex", gap: 10, alignItems: "center" }}><span class=${"ftype " + cls}>${I(ico, "lg")}</span>
+            <span style=${{ minWidth: 0 }}>${d.department ? DChip(d.department, lang) : null}<div class="muted" style=${{ fontSize: 11.5, marginTop: 2 }}>${(KIND_LABEL[d.kind] || [d.kind, d.kind])[B ? 1 : 0]}</div></span></div>
+          <h4 title=${d.title}>${d.title}</h4>
+          <div>${(d.tags || []).filter((x) => !x.startsWith("kind:") && !x.startsWith("dept:")).slice(0, 4).map((x) => html`<span class="tag" key=${x}>${tagLabel(x)}</span>`)}</div>
+          <div class="doc-meta"><span style=${{ color: "var(--ink)" }}>${d.case_id || "-"}</span><span>${fmtDate(d.created_at)}</span></div></div>`; })}</div>`}
+      </section>
+      ${cur && html`<aside class="preview">
+        <div class="preview-h"><b style=${{ fontSize: 13, display: "inline-flex", gap: 6, alignItems: "center" }}>${I("Eye")} ${B ? "Pratonton" : "Preview"}</b>
+          <a class="btn" href=${"/api/documents/" + cur.id + "/file"} target="_blank" download>${I("Download")}</a></div>
+        ${isImg ? html`<img src=${"/api/documents/" + cur.id + "/file"} alt=${cur.title} />` : /\.pdf$|work_ticket|receipt/.test(cur.title + cur.kind) ? html`<iframe src=${"/api/documents/" + cur.id + "/file"} title=${cur.title}></iframe>` : html`<div class="empty">${B ? "Tiada pratonton untuk jenis fail ini." : "No preview for this file type."}</div>`}
+        <dl><dt>${B ? "Fail" : "File"}</dt><dd title=${cur.title}>${cur.title}</dd><dt>${t.caseId}</dt><dd>${cur.case_id || "-"}</dd><dt>${t.date}</dt><dd>${fmtDate(cur.created_at)}</dd><dt>ID</dt><dd>${cur.id}</dd></dl>
+      </aside>`}
+    </div></div>`;
 }
+
 
 function CalendarView({ t, lang }) {
   const [rows] = useLoad("/api/appointments");
@@ -311,19 +430,29 @@ function ImpactView({ lang }) {
     ${S(rm(d.fees), "Fees processed", "Yuran diproses")}${S(d.pending_approvals, "Waiting for a human", "Menunggu manusia")}${S(d.audit_entries, "Audit ledger entries", "Entri lejar audit")}`}</div>`;
 }
 
-function ApprovalsView({ t, lang, user, onDecide }) {
-  const [rows, reload] = useLoad("/api/approvals");
-  return html`<div class="view-narrow grid">${(rows || []).length === 0 && html`<div class="empty">${t.none}</div>`}
-    ${(rows || []).map((a) => html`<div class="card" key=${a.id}><div class="card-h"><b>${a.action.replaceAll("_", " ")}</b>${Pill(a.status)}<span class="mono muted">${a.case_id}</span>
-      <span class="pill">${a.actor === "citizen" ? (lang === "bm" ? "rakyat memutuskan" : "citizen decides") : (lang === "bm" ? "pegawai memutuskan" : "officer decides")}</span></div>
-      <div>${a.reason}</div>
+function ActionsView({ t, lang, onDecide }) {
+  const [rows, reload] = useLoad("/api/approvals"); const [tab, setTab] = useState("you"); const B = lang === "bm";
+  const all = rows || [];
+  const mine = all.filter((a) => a.actor === "citizen"), officer = all.filter((a) => a.actor !== "citizen");
+  const list = tab === "you" ? mine : officer;
+  const label = (a) => ({ citizen_confirm_payment: B ? "Sahkan bayaran" : "Confirm a payment", contractor_dispatch_over_threshold: B ? "Semakan pegawai: kos pembaikan melebihi had" : "Officer review: repair cost above the limit" }[a.action] || a.action.replaceAll("_", " "));
+  const stage = (a) => a.status === "pending" ? (B ? "Dalam semakan" : "Under review") : a.status === "approved" ? (B ? "Diluluskan" : "Approved") : (B ? "Ditolak" : "Rejected");
+  return html`<div class="view-narrow">
+    <div class="page-h"><div><h2>${B ? "Pusat tindakan" : "Action centre"}</h2><p>${B ? "Apa yang menunggu anda, dan apa yang sedang disemak oleh pegawai." : "What is waiting for you, and what an officer is reviewing."}</p></div></div>
+    <div class="tabs"><button class=${tab === "you" ? "on" : ""} onClick=${() => setTab("you")}>${B ? "Menunggu anda" : "Waiting for you"} (${mine.filter((a) => a.status === "pending").length})</button>
+      <button class=${tab === "off" ? "on" : ""} onClick=${() => setTab("off")}>${B ? "Menunggu pegawai" : "Waiting for an officer"} (${officer.filter((a) => a.status === "pending").length})</button></div>
+    <div class="grid">${!list.length && html`<div class="empty">${t.none}</div>`}
+    ${list.map((a) => html`<div class="card" key=${a.id} style=${{ borderLeft: "3px solid " + (a.status === "pending" ? "var(--warn)" : a.status === "approved" ? "var(--good)" : "var(--bad)") }}>
+      <div class="card-h"><b>${label(a)}</b>${Pill(a.status)}<span class="mono muted">${a.case_id}</span><span class="mono muted" style=${{ marginLeft: "auto" }}>${fmtDate(a.created_at)}</span></div>
+      <div style=${{ fontSize: 14 }}>${a.reason}</div>
       ${a.proposed?.citations?.length > 0 && html`<div class="cite">${a.proposed.citations.join(" · ")}</div>`}
-      ${a.status === "pending" && a.actor === user.role && html`<div style=${{ display: "flex", gap: 8, marginTop: 10 }}>
-        <button class="btn good" onClick=${async () => { await onDecide(a.id, true); reload(); }}>${t.approve}</button>
-        <button class="btn bad" onClick=${async () => { await onDecide(a.id, false); reload(); }}>${t.reject}</button></div>`}
-      ${a.status === "pending" && a.actor !== user.role && html`<div class="muted" style=${{ marginTop: 8 }}>${lang === "bm" ? "Baca sahaja dalam paparan ini." : "Read-only in this view."}</div>`}
-    </div>`)}</div>`;
+      ${a.actor === "citizen" && a.status === "pending" && html`<div style=${{ display: "flex", gap: 8, marginTop: 10 }}>
+        <button class="btn primary" onClick=${async () => { await onDecide(a.id, true); reload(); }}>${t.confirmPay}${a.proposed?.amount ? " " + rm(a.proposed.amount) : ""}</button>
+        <button class="btn bad" onClick=${async () => { await onDecide(a.id, false); reload(); }}>${t.cancel}</button></div>`}
+      ${a.actor !== "citizen" && html`<div class="muted" style=${{ marginTop: 8, fontSize: 13 }}>${stage(a)}${a.officer ? " · " + a.officer : ""}</div>`}
+    </div>`)}</div></div>`;
 }
+
 
 function MemoryBag({ t, lang, user, onChange }) {
   const [st, setSt] = useState(null); const [busy, setBusy] = useState(""); const [msg, setMsg] = useState("");
@@ -390,13 +519,17 @@ function PolicyView({ t, lang, user }) {
 }
 
 function AuditView({ t, lang, cases, caseId, setCaseId }) {
-  const [rows, setRows] = useState([]); const [health, setHealth] = useState(null);
+  const [rows, setRows] = useState([]); const [health, setHealth] = useState(null); const [who, setWho] = useState(""); const B = lang === "bm";
   useEffect(() => { if (caseId) api(`/api/cases/${caseId}/timeline`).then(setRows); api("/api/health").then(setHealth); }, [caseId]);
+  const kind = (r) => /agent|router|policy|multimodal|execution|notification|identity|reasoning|dispatcher|flood|summons|licence/.test(r.actor) ? "ai" : /officer|aisyah|citizen|^[a-z]+$/.test(r.actor) && !/case_manager|system/.test(r.actor) ? "human" : "";
+  const shown = rows.filter((r) => !who || kind(r) === who);
   return html`<div class="view-narrow">
-    <div class="toolbar"><select value=${caseId || ""} onChange=${(e) => setCaseId(e.target.value)}><option value="">${t.caseId}…</option>${cases.map((c) => html`<option>${c.case_id}</option>`)}</select>
-      ${health && html`<span class=${"pill " + (health.audit_chain_valid ? "good" : "bad")}>${health.audit_chain_valid ? (lang === "bm" ? "Rantai hash sah" : "Hash chain valid") : (lang === "bm" ? "Rantai rosak" : "Chain broken")}</span>`}
-      ${rows.length > 0 && html`<a class="btn" href=${"data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(rows, null, 2))} download=${caseId + "-audit.json"}>Export JSON</a>`}</div>
-    ${!caseId ? html`<div class="empty">${lang === "bm" ? "Pilih kes untuk melihat lejar audit." : "Pick a case to see its audit ledger."}</div>` : html`<ul class="timeline">${rows.map((r) => html`<li key=${r.id}>
+    <div class="page-h"><div><h2>${t.audit}</h2><p>${B ? "Setiap tindakan pada kes anda, dirantai dengan hash SHA-256 supaya tidak boleh diubah tanpa dikesan." : "Every action on your case, chained with SHA-256 hashes so it cannot be changed without detection."}</p></div>
+      ${health && html`<span class=${"chain-ok " + (health.audit_chain_valid ? "good" : "bad")}>${I(health.audit_chain_valid ? "ShieldCheck" : "ShieldAlert")} ${health.audit_chain_valid ? (B ? "Rantai hash sah" : "Hash chain verified") : (B ? `Rantai rosak di entri #${health.first_bad_entry}` : `Chain broken at entry #${health.first_bad_entry}`)}</span>`}</div>
+    <div class="toolbar"><select value=${caseId || ""} onChange=${(e) => setCaseId(e.target.value)}><option value="">${t.caseId}…</option>${cases.map((c) => html`<option value=${c.case_id}>${c.case_id} · ${c.intent.slice(0, 40)}</option>`)}</select>
+      <select value=${who} onChange=${(e) => setWho(e.target.value)}><option value="">${B ? "Semua entri" : "All entries"} (${rows.length})</option><option value="ai">${B ? "Ejen AI" : "AI agents"}</option><option value="human">${B ? "Manusia" : "People"}</option></select>
+      ${rows.length > 0 && html`<a class="btn" href=${"data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(rows, null, 2))} download=${caseId + "-audit.json"}>${I("Download")} JSON</a>`}</div>
+    ${!caseId ? html`<div class="empty">${B ? "Pilih kes untuk melihat lejar audit." : "Pick a case to see its audit ledger."}</div>` : html`<ul class="timeline">${shown.map((r) => html`<li key=${r.id} class=${kind(r)}>
       <div><span class="mono muted">${fmtTime(r.ts)}</span> · <b>${r.actor}</b> · ${r.action.replaceAll("_", " ")}</div>
       <div class="hash">#${r.id} · ${r.hash.slice(0, 24)}…</div>
       <details><summary class="muted" style=${{ fontSize: 12 }}>payload</summary><pre class="mono" style=${{ whiteSpace: "pre-wrap" }}>${JSON.stringify(r.payload, null, 2)}</pre></details></li>`)}</ul>`}
@@ -455,6 +588,15 @@ function App() {
   const [threadCases, setThreadCases] = useState([]);
   const [traceOn, setTraceOn] = useState(true); const [navOpen, setNavOpen] = useState(false); const [traceOpen, setTraceOpen] = useState(false); const [preset, setPreset] = useState(null); const [draft, setDraft] = useState("");
   const [auditCase, setAuditCase] = useState(null); const [search, setSearch] = useState("");
+  const [rail, setRailS] = useState(store.get("mt-rail", false)); const [sideW, setSideW] = useState(store.get("mt-sidew", 272));
+  const [unread, setUnread] = useState(0); const [pendingPay, setPendingPay] = useState(0);
+  const setRail = (v) => { setRailS(v); store.set("mt-rail", v); };
+  const startResize = (e) => {
+    e.preventDefault(); const x0 = e.clientX, w0 = sideW; e.target.classList.add("on");
+    const mv = (ev) => setSideW(Math.min(420, Math.max(220, w0 + ev.clientX - x0)));
+    const up = () => { e.target.classList.remove("on"); document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); setSideW((w) => { store.set("mt-sidew", w); return w; }); };
+    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
+  };
   const esRef = useRef(null);
   const t = I18N[lang];
   const setLang = (l) => { setLangS(l); store.set("mt-lang", l); };
@@ -467,6 +609,8 @@ function App() {
     if (!user) return;
     const [c, th, ap] = await Promise.all([api("/api/cases"), api("/api/threads"), api("/api/approvals")]).catch(() => [[], [], []]);
     setCases(c); setThreads(th); setApprovals(ap);
+    api("/api/notifications").then((n) => setUnread(n.filter((x) => new Date(x.created_at) > new Date(store.get("mt-seen", 0))).length)).catch(() => {});
+    api("/api/payments").then((p) => setPendingPay(p.filter((x) => x.status === "pending").length)).catch(() => {});
     if (threadId) setThreadCases(await api(`/api/threads/${threadId}`).catch(() => []));
   }, [user, threadId]);
   useEffect(() => { if (user) api("/api/catalog").then(setCatalog); }, [user]);
@@ -508,7 +652,7 @@ function App() {
   const togglePin = (tid) => { const n = pins.includes(tid) ? pins.filter((x) => x !== tid) : [...pins, tid]; setPins(n); store.set("mt-pins", n); };
 
   if (!booted) return null;
-  if (!user) return html`<${Login} t=${t} lang=${lang} setLang=${setLang} onIn=${(r) => { TOKEN = r.token; store.set("mt-token", r.token); setUser(r.user); setView(r.user.role === "officer" ? "approvals" : "console"); }} />`;
+  if (!user) return html`<${Login} t=${t} lang=${lang} setLang=${setLang} onIn=${(r) => { TOKEN = r.token; store.set("mt-token", r.token); setUser(r.user); setView("console"); }} />`;
 
   const events = threadId ? evs[threadId] || [] : [];
   const last = [...events].reverse().find((e) => e.layer !== "case_manager");
@@ -518,12 +662,12 @@ function App() {
     case "cases": body = html`<${CasesView} t=${t} lang=${lang} cases=${cases} openThread=${openThread} openAudit=${(id) => { setAuditCase(id); setView("audit"); }} />`; break;
     case "search": body = html`<${CasesView} t=${t} lang=${lang} cases=${cases} query=${search} openThread=${openThread} openAudit=${(id) => { setAuditCase(id); setView("audit"); }} />`; break;
     case "payments": body = html`<${PaymentsView} t=${t} lang=${lang} />`; break;
-    case "documents": body = html`<${DocumentsView} t=${t} />`; break;
+    case "documents": body = html`<${DocumentsView} t=${t} lang=${lang} />`; break;
     case "calendar": body = html`<${CalendarView} t=${t} lang=${lang} />`; break;
-    case "inbox": body = html`<${InboxView} t=${t} lang=${lang} openThread=${openThread} />`; break;
+    case "inbox": store.set("mt-seen", Date.now()); body = html`<${InboxView} t=${t} lang=${lang} openThread=${openThread} />`; break;
     case "map": body = html`<${MapView} lang=${lang} />`; break;
     case "impact": body = html`<${ImpactView} lang=${lang} />`; break;
-    case "approvals": body = html`<${ApprovalsView} t=${t} lang=${lang} user=${user} onDecide=${onDecide} />`; break;
+    case "actions": body = html`<${ActionsView} t=${t} lang=${lang} onDecide=${onDecide} />`; break;
     case "policy": body = html`<${PolicyView} t=${t} lang=${lang} user=${user} />`; break;
     case "audit": body = html`<${AuditView} t=${t} lang=${lang} cases=${cases} caseId=${auditCase} setCaseId=${setAuditCase} />`; break;
     case "settings": body = html`<${SettingsView} t=${t} lang=${lang} setLang=${setLang} theme=${theme} setTheme=${setTheme} user=${user} />`; break;
@@ -532,17 +676,22 @@ function App() {
   }
   const wide = () => window.innerWidth > 1280;
   const go = (v) => { setView(v); setNavOpen(false); };
-  return html`<div class=${"shell" + (traceOn ? "" : " trace-off") + (navOpen ? " nav-open" : "") + (traceOpen ? " trace-open" : "")}>
+  const TITLES = { actions: lang === "bm" ? "Pusat tindakan" : "Action centre", payments: lang === "bm" ? "Bayaran" : "Payments", documents: lang === "bm" ? "Dokumen" : "Documents", search: lang === "bm" ? "Jejak kes" : "Track a case" };
+  const curCase = threadCases[0];
+  return html`<div class=${"shell" + (traceOn ? "" : " trace-off") + (navOpen ? " nav-open" : "") + (traceOpen ? " trace-open" : "") + (rail ? " rail" : "")} style=${{ "--side-w": (rail ? 64 : sideW) + "px" }}>
     ${(navOpen || traceOpen) && html`<div class="backdrop" onClick=${() => { setNavOpen(false); setTraceOpen(false); }}></div>`}
     <${Sidebar} t=${t} lang=${lang} user=${user} view=${view} setView=${go} catalog=${catalog} cases=${cases} threads=${threads} pins=${pins} togglePin=${togglePin}
-      openThread=${(id) => { setNavOpen(false); openThread(id); }} newRequest=${() => { setNavOpen(false); newRequest(); }} launchDept=${(k) => { setNavOpen(false); newRequest(); setPreset(k); }} logout=${logout} theme=${theme} setTheme=${setTheme} />
+      openThread=${(id) => { setNavOpen(false); openThread(id); }} newRequest=${() => { setNavOpen(false); newRequest(); }} launchDept=${(k, sub) => { setNavOpen(false); newRequest(); setPreset(k); if (sub) setDraft((lang === "bm" ? sub.bm : sub.en) + ": "); setTimeout(() => document.getElementById("composer")?.focus(), 50); }}
+      logout=${logout} theme=${theme} setTheme=${setTheme} rail=${rail} setRail=${setRail} approvals=${approvals} unread=${unread} pendingPay=${pendingPay} />
+    ${!rail && html`<div class="resizer" style=${{ left: sideW - 3 + "px", position: "fixed", top: 0, height: "100vh" }} onMouseDown=${startResize} onDoubleClick=${() => { setSideW(272); store.set("mt-sidew", 272); }} title="Drag to resize · double-click to reset"></div>`}
     <main class="main">
-      <div class="top"><button class="btn hamburger" aria-label="Menu" onClick=${() => setNavOpen(true)}>☰</button><h1>${t[titleKey] || titleKey}</h1>
+      <div class="top"><button class="btn hamburger" aria-label="Menu" onClick=${() => setNavOpen(true)}>${I("Menu")}</button><h1>${TITLES[view] || t[titleKey] || titleKey}</h1>
+        ${view === "console" && curCase && html`<span class="case-chip"><span class="ddot" style=${{ background: dcol(curCase.current_department) }}></span>${curCase.case_id} · ${curCase.status.replace("_", " ")}</span>`}
         ${view === "search" && html`<input class="btn" style=${{ fontWeight: 400, minWidth: 260 }} placeholder=${t.searchPh} value=${search} onInput=${(e) => setSearch(e.target.value)} />`}
         <span class="sp"></span>
-        <span class="agent-badge" title="Active agent"><span class=${"dot" + (last && last.event !== "thread_done" && last.event !== "case_done" ? " live" : "")}></span>${last ? `${last.actor}${modelOf(last) ? " · " + modelOf(last) : ""}` : (user.role === "officer" ? t.officerMode : t.citizenMode)}</span>
+        <span class="agent-badge" title="Active agent"><span class=${"dot" + (last && last.event !== "thread_done" && last.event !== "case_done" ? " live" : "")}></span>${last ? `${last.actor}${modelOf(last) ? " · " + modelOf(last) : ""}` : (lang === "bm" ? "Sedia" : "Ready")}</span>
         <div class="seg"><button class=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>EN</button><button class=${lang === "bm" ? "on" : ""} onClick=${() => setLang("bm")}>BM</button></div>
-        <button class=${"btn trace-btn" + (traceOn ? " when-narrow" : "")} onClick=${() => { setTraceOn(true); if (!wide()) setTraceOpen(true); }}>⚡ <span class="lbl">${t.trace}</span></button>
+        <button class=${"btn trace-btn" + (traceOn ? " when-narrow" : "")} onClick=${() => { setTraceOn(true); if (!wide()) setTraceOpen(true); }}>${I("Activity")} <span class="lbl">${t.trace}</span></button>
       </div>
       ${view === "console" ? html`<${Console} t=${t} lang=${lang} user=${user} catalog=${catalog} thread=${threadId ? { messages: msgs[threadId] || [] } : null} events=${events}
           cases=${threadCases} approvals=${approvals} send=${send} onDecide=${onDecide} preset=${preset} setPreset=${setPreset} draft=${draft} setDraft=${setDraft} />`

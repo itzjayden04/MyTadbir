@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="ms"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dokumen (Documents) · MyTadbir</title>
+<!-- Tailwind Play CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Google Fonts: Plus Jakarta Sans, IBM Plex Sans, IBM Plex Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Plus Jakarta Sans"', 'sans-serif'],
+            sans: ['"IBM Plex Sans"', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'monospace'],
+          },
+          colors: {
+            bg: '#FFFFFF',
+            surface: '#FAFAFA',
+            'surface-2': '#F4F4F5',
+            line: '#E4E4E7',
+            'line-strong': '#D4D4D8',
+            ink: '#09090B',
+            'ink-2': '#3F3F46',
+            muted: '#71717A',
+            dept: {
+              health: '#DC2626',
+              education: '#2563EB',
+              localgov: '#0F766E',
+              immigration: '#7C3AED',
+              jpj: '#EA580C',
+              lhdn: '#CA8A04',
+              jkm: '#DB2777',
+              police: '#1E3A8A',
+              agri: '#16A34A',
+              cross: '#475569',
+            },
+            status: {
+              success: '#15803D',
+              warning: '#B45309',
+              danger: '#B91C1C',
+              info: '#1D4ED8',
+              neutral: '#52525B',
+            }
+          },
+          boxShadow: {
+            floating: '0 8px 24px rgba(0,0,0,0.08)',
+            'floating-lg': '0 12px 32px rgba(0,0,0,0.12)',
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+    .status-pulse { animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+  </style>
+<meta content="web_dashboard" name="shell-type"/></head>
+<body class="h-full bg-white text-ink font-sans antialiased overflow-hidden flex flex-col select-none">
+<!-- TOP APP BAR -->
+<header class="h-14 border-b border-line bg-white flex items-center justify-between px-4 z-20 shrink-0">
+<div class="flex items-center gap-3">
+<button class="p-1.5 rounded text-ink hover:bg-surface-2 transition-colors" id="toggle-sidebar-btn" title="Toggle Sidebar">
+<i class="w-4 h-4" data-lucide="panel-left-close"></i>
+</button>
+<div class="flex items-center gap-2">
+<span class="font-display font-bold text-sm tracking-tight">Dokumen &amp; Arkib</span>
+<span class="text-line-strong text-xs font-mono">/</span>
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2 border border-line text-xs font-mono text-ink-2">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+<span class="font-medium">18 Dokumen Berdaftar</span>
+<span class="text-muted">·</span>
+<span class="text-muted text-[11px]">Audit Berpusat</span>
+</div>
+</div>
+</div>
+<!-- Center Department Status Pill -->
+<div class="hidden md:flex items-center">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-line text-xs">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-dept-localgov opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-dept-localgov"></span>
+</span>
+<span class="font-medium text-ink-2 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+<span>Penyimpanan Awan Kerajaan (MyGovCloud)</span>
+<span class="text-muted">·</span>
+<span class="text-status-success font-mono text-[11px]">Enkripsi AES-256</span>
+</span>
+</div>
+</div>
+<!-- Right Controls -->
+<div class="flex items-center gap-2.5">
+<div class="hidden lg:flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+<button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm">Awam (Citizen)</button>
+<button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink">Pegawai (Officer)</button>
+</div>
+<div class="flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+<button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm" id="lang-bm">BM</button>
+<button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink" id="lang-en">EN</button>
+</div>
+<div class="h-4 w-[1px] bg-line"></div>
+<button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-line bg-surface hover:bg-surface-2 text-xs font-mono text-ink-2" id="toggle-trace-btn">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="activity"></i>
+<span class="hidden sm:inline">Trace</span>
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+</button>
+</div>
+</header>
+<!-- MAIN APP CONTAINER -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- 1. LEFT COLLAPSIBLE NAVIGATION SIDEBAR -->
+<aside class="w-64 bg-surface border-r border-line flex flex-col shrink-0 relative transition-all duration-150 h-full z-10 hidden md:flex" id="app-sidebar">
+<div class="p-3 border-b border-line flex flex-col gap-2.5 shrink-0">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-ink text-white flex items-center justify-center font-display font-bold text-xs rounded-sm tracking-tighter">M</div>
+<span class="font-display font-bold text-base tracking-tight text-ink">MyTadbir</span>
+</div>
+<span class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded bg-surface-2 border border-line text-muted">v2.4</span>
+</div>
+<button class="w-full flex items-center justify-between px-3 py-2 bg-ink hover:bg-ink-2 text-white rounded text-xs font-medium transition-colors shadow-sm">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-white" data-lucide="plus"></i>
+<span>Permintaan Baharu</span>
+</div>
+<span class="text-[10px] font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">Ctrl N</span>
+</button>
+</div>
+<!-- Navigation links -->
+<div class="flex-1 overflow-y-auto px-2 py-3 space-y-4 text-xs">
+<div>
+<div class="px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider">Aktiviti Saya</div>
+<div class="mt-1 space-y-0.5">
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group" href="#cases">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="folder"></i>
+<span>Kes Saya</span>
+</div>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-2 border border-line text-[11px] font-mono">4</span>
+</a>
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group" href="#payments">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="credit-card"></i>
+<span>Bayaran</span>
+</div>
+<span class="text-[10px] font-mono text-status-warning bg-amber-50 px-1 py-0.2 rounded border border-amber-200">1 Tertunggak</span>
+</a>
+<!-- Active Documents Menu Item -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-2 border border-line text-ink font-medium" href="#documents">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-ink" data-lucide="file-text"></i>
+<span class="font-semibold text-ink">Dokumen</span>
+</div>
+<span class="px-1.5 py-0.2 rounded-full bg-ink text-white text-[10px] font-mono font-medium">18</span>
+</a>
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group" href="#calendar">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="calendar"></i>
+<span>Kalendar</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group" href="#notifications">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="bell"></i>
+<span>Pemberitahuan</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-status-danger"></span>
+</a>
+</div>
+</div>
+<div>
+<div class="px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider">Perbualan Terkini</div>
+<div class="mt-1 space-y-0.5">
+<div class="p-2 rounded bg-white border border-line hover:border-line-strong cursor-pointer">
+<div class="font-medium text-xs truncate">Aduan Parit Seksyen 14</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5 mt-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+<span>MT-26-000123</span>
+</div>
+</div>
+<div class="p-2 rounded hover:bg-surface-2 cursor-pointer">
+<div class="truncate text-xs text-ink-2">Cukai Jalan Proton X50</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5 mt-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-jpj"></span>
+<span>MT-26-000418</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- User footer -->
+<div class="p-2 border-t border-line bg-surface shrink-0">
+<div class="flex items-center justify-between p-1.5 rounded hover:bg-surface-2 transition-colors">
+<div class="flex items-center gap-2.5 overflow-hidden">
+<div class="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center font-display font-semibold text-xs shrink-0">AH</div>
+<div class="text-left overflow-hidden">
+<div class="font-medium text-xs text-ink truncate">Ahmad Harith</div>
+<div class="flex items-center gap-1 text-[10px] font-mono text-status-success">
+<i class="w-3 h-3 text-status-success" data-lucide="check-circle-2"></i>
+<span>MyDigital ID Sah</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- 2. DOCUMENT REPOSITORY MAIN WORKSPACE (Filters + Documents Grid + Preview Pane) -->
+<main class="flex-1 flex overflow-hidden bg-white"><div class="flex flex-col w-full h-full overflow-hidden bg-surface-container-lowest text-on-surface">
+<!-- PAGE HEADER & CONTROLS STRIP -->
+<header class="border-b border-surface-container px-6 py-4 flex flex-col gap-3 shrink-0 bg-surface-container-lowest">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div>
+<div class="flex items-center gap-2">
+<h1 class="font-headline-lg text-headline-lg tracking-tight text-primary">Kalendar &amp; Temujanji Rasmi</h1>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-container text-secondary text-caption font-data-mono-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+            Zon Waktu: Asia/Kuala_Lumpur (MYT +08)
+          </span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">Jadual temujanji perkhidmatan awam, operasi tapak kontraktor, dan tarikh akhir statutori.</p>
+</div>
+<!-- Quick actions -->
+<div class="flex items-center gap-2">
+<button class="h-9 px-3 rounded bg-surface-container-lowest border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" id="btn-sync-ics" onclick="downloadICS()">
+<span class="material-symbols-outlined text-[16px] text-secondary">cloud_download</span>
+<span>Segerakkan Kalendar (.ics)</span>
+</button>
+<button class="h-9 px-3.5 rounded bg-primary hover:bg-on-tertiary-container text-on-primary font-label-sm text-label-sm flex items-center gap-1.5 transition-colors shadow-sm" onclick="openBookingModal()">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Tempah Temujanji Baharu</span>
+</button>
+</div>
+</div>
+<!-- SUB-CONTROLS BAR: Navigation + Views + Agency Filters -->
+<div class="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+<!-- Date Navigator & Views -->
+<div class="flex items-center gap-3">
+<!-- Prev / Next / Today -->
+<div class="flex items-center bg-surface-container p-0.5 rounded border border-surface-container">
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container-lowest text-on-surface transition-colors" onclick="navDate(-1)" title="Bulan Sebelumnya">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="px-2.5 h-7 rounded hover:bg-surface-container-lowest text-on-surface font-label-sm text-label-sm transition-colors" onclick="navToday()">
+            Hari Ini
+          </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container-lowest text-on-surface transition-colors" onclick="navDate(1)" title="Bulan Seterusnya">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-headline-md text-headline-md text-primary tracking-tight" id="current-month-label">Februari 2026</span>
+<span class="text-caption text-secondary font-data-mono-sm">Minggu 7</span>
+</div>
+<div class="h-4 w-[1px] bg-surface-container"></div>
+<!-- View switcher -->
+<div class="inline-flex p-0.5 rounded bg-surface-container border border-surface-container text-label-sm font-label-sm">
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest text-primary font-semibold shadow-xs" id="view-month-btn" onclick="switchView('month')">Bulan</button>
+<button class="px-2.5 py-1 rounded text-secondary hover:text-primary" id="view-week-btn" onclick="switchView('week')">Minggu</button>
+<button class="px-2.5 py-1 rounded text-secondary hover:text-primary" id="view-agenda-btn" onclick="switchView('agenda')">Agenda</button>
+</div>
+</div>
+<!-- Department Agency Filter Pills -->
+<div class="flex flex-wrap items-center gap-1.5" id="agency-filter-container">
+<button class="agency-pill h-7 px-2.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" onclick="filterAgency(this, 'all')">
+<span>Semua Agensi</span>
+<span class="w-4 h-4 rounded-full bg-surface-container-lowest/20 flex items-center justify-center text-[10px] font-data-mono-sm">6</span>
+</button>
+<button class="agency-pill h-7 px-2.5 rounded-full bg-surface-container-lowest border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" onclick="filterAgency(this, 'mbpj')">
+<span class="w-2 h-2 rounded-full" style="background-color: #0F766E;"></span>
+<span>MBPJ</span>
+</button>
+<button class="agency-pill h-7 px-2.5 rounded-full bg-surface-container-lowest border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" onclick="filterAgency(this, 'jpj')">
+<span class="w-2 h-2 rounded-full" style="background-color: #EA580C;"></span>
+<span>JPJ</span>
+</button>
+<button class="agency-pill h-7 px-2.5 rounded-full bg-surface-container-lowest border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" onclick="filterAgency(this, 'kkm')">
+<span class="w-2 h-2 rounded-full" style="background-color: #DC2626;"></span>
+<span>KKM</span>
+</button>
+<button class="agency-pill h-7 px-2.5 rounded-full bg-surface-container-lowest border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" onclick="filterAgency(this, 'lhdn')">
+<span class="w-2 h-2 rounded-full" style="background-color: #CA8A04;"></span>
+<span>LHDN</span>
+</button>
+<button class="agency-pill h-7 px-2.5 rounded-full bg-surface-container-lowest border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" onclick="filterAgency(this, 'jps')">
+<span class="w-2 h-2 rounded-full" style="background-color: #16A34A;"></span>
+<span>JPS</span>
+</button>
+</div>
+</div>
+</header>
+<!-- WORKSPACE BODY: Left Rail + Center Grid + Right Detail Drawer -->
+<div class="flex-1 flex overflow-hidden">
+<!-- 1. LEFT SIDE COLUMN: Mini-calendar + Next 7 Days -->
+<aside class="w-72 lg:w-80 border-r border-surface-container bg-surface-container-low flex flex-col shrink-0 overflow-y-auto">
+<!-- Mini Month Picker -->
+<div class="p-4 border-b border-surface-container bg-surface-container-lowest">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-default text-label-default text-primary">Februari 2026</span>
+<span class="font-data-mono-sm text-caption text-secondary">Tahun 2026</span>
+</div>
+<!-- Days header -->
+<div class="grid grid-cols-7 gap-1 text-center font-data-mono-sm text-caption text-secondary mb-2">
+<span>Is</span><span>Se</span><span>Ra</span><span>Kh</span><span>Ju</span><span>Sa</span><span>Ah</span>
+</div>
+<!-- Mini days grid -->
+<div class="grid grid-cols-7 gap-1 text-center font-data-mono-sm text-caption">
+<!-- Prev month days -->
+<span class="p-1.5 text-secondary/40">26</span>
+<span class="p-1.5 text-secondary/40">27</span>
+<span class="p-1.5 text-secondary/40">28</span>
+<span class="p-1.5 text-secondary/40">29</span>
+<span class="p-1.5 text-secondary/40">30</span>
+<span class="p-1.5 text-secondary/40">31</span>
+<!-- Feb -->
+<span class="p-1.5 text-secondary">1</span>
+<span class="p-1.5 text-on-surface">2</span>
+<span class="p-1.5 text-on-surface">3</span>
+<span class="p-1.5 text-on-surface">4</span>
+<span class="p-1.5 text-on-surface">5</span>
+<span class="p-1.5 text-on-surface">6</span>
+<span class="p-1.5 text-on-surface">7</span>
+<span class="p-1.5 text-secondary">8</span>
+<!-- Today: 09 Feb -->
+<button class="p-1.5 bg-primary text-on-primary rounded font-bold relative flex items-center justify-center" onclick="loadEventDetail('mbpj-drain')">
+            9
+            <span class="w-1 h-1 rounded-full absolute bottom-0.5 bg-dept-localgov"></span>
+</button>
+<!-- 10 Feb -->
+<button class="p-1.5 hover:bg-surface-container rounded text-on-surface relative flex items-center justify-center" onclick="loadEventDetail('kkm-clinic')">
+            10
+            <span class="w-1 h-1 rounded-full absolute bottom-0.5" style="background-color: #DC2626;"></span>
+</button>
+<span class="p-1.5 text-on-surface">11</span>
+<!-- 12 Feb -->
+<button class="p-1.5 hover:bg-surface-container rounded text-on-surface relative flex items-center justify-center" onclick="loadEventDetail('jpj-inspect')">
+            12
+            <span class="w-1 h-1 rounded-full absolute bottom-0.5" style="background-color: #EA580C;"></span>
+</button>
+<span class="p-1.5 text-on-surface">13</span>
+<span class="p-1.5 text-on-surface">14</span>
+<!-- 15 Feb -->
+<button class="p-1.5 hover:bg-surface-container rounded text-on-surface relative flex items-center justify-center" onclick="loadEventDetail('lhdn-tax')">
+            15
+            <span class="w-1 h-1 rounded-full absolute bottom-0.5" style="background-color: #CA8A04;"></span>
+</button>
+<span class="p-1.5 text-on-surface">16</span>
+<span class="p-1.5 text-on-surface">17</span>
+<span class="p-1.5 text-on-surface">18</span>
+<span class="p-1.5 text-on-surface">19</span>
+<span class="p-1.5 text-on-surface">20</span>
+<!-- 21 Feb -->
+<button class="p-1.5 hover:bg-surface-container rounded text-on-surface relative flex items-center justify-center" onclick="loadEventDetail('jpj-roadtax')">
+            21
+            <span class="w-1 h-1 rounded-full absolute bottom-0.5" style="background-color: #EA580C;"></span>
+</button>
+<span class="p-1.5 text-on-surface">22</span>
+<span class="p-1.5 text-on-surface">23</span>
+<span class="p-1.5 text-on-surface">24</span>
+<span class="p-1.5 text-on-surface">25</span>
+<span class="p-1.5 text-on-surface">26</span>
+<span class="p-1.5 text-on-surface">27</span>
+<!-- 28 Feb -->
+<button class="p-1.5 hover:bg-surface-container rounded text-on-surface relative flex items-center justify-center" onclick="loadEventDetail('mbpj-assessment')">
+            28
+            <span class="w-1 h-1 rounded-full absolute bottom-0.5" style="background-color: #0F766E;"></span>
+</button>
+</div>
+</div>
+<!-- NEXT 7 DAYS CHRONOLOGICAL LIST -->
+<div class="p-4 flex-1 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">history_toggle_off</span>
+<h2 class="font-label-default text-label-default text-primary uppercase tracking-wider text-[11px]">7 Hari Seterusnya</h2>
+</div>
+<span class="font-data-mono-sm text-caption text-secondary">4 Acara</span>
+</div>
+<div class="space-y-2">
+<!-- Card 1 (Hari Ini - 09 Feb) -->
+<div class="upcoming-item p-2.5 rounded bg-surface-container-lowest border-l-4 border-l-dept-localgov border border-surface-container hover:bg-surface-container cursor-pointer transition-all shadow-xs" data-event="mbpj-drain" onclick="loadEventDetail('mbpj-drain')">
+<div class="flex items-center justify-between text-caption font-data-mono-sm">
+<span class="px-1.5 py-0.2 rounded bg-dept-localgov/10 text-dept-localgov font-semibold">HARI INI · 09 FEB</span>
+<span class="text-secondary">11:30 AM</span>
+</div>
+<div class="font-label-default text-label-default text-primary mt-1 line-clamp-1 font-semibold">Pembersihan Longkang Zon 7 (MBPJ)</div>
+<div class="flex items-center gap-1.5 text-caption text-secondary mt-0.5">
+<span class="material-symbols-outlined text-[13px]">location_on</span>
+<span class="truncate">Seksyen 14, Petaling Jaya</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-1.5 border-t border-surface-container text-caption font-data-mono-sm">
+<span class="text-primary font-medium">MT-26-000123</span>
+<span class="text-dept-localgov flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov animate-pulse"></span>
+                Operasi Tapak
+              </span>
+</div>
+</div>
+<!-- Card 2 (Esok - 10 Feb) -->
+<div class="upcoming-item p-2.5 rounded bg-surface-container-lowest border-l-4 border-l-dept-health border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-event="kkm-clinic" onclick="loadEventDetail('kkm-clinic')">
+<div class="flex items-center justify-between text-caption font-data-mono-sm">
+<span class="text-secondary font-medium">ESOK · 10 FEB</span>
+<span class="text-secondary">09:00 AM</span>
+</div>
+<div class="font-label-default text-label-default text-primary mt-1 line-clamp-1">Temujanji Rawatan Pesakit Luar (KKM)</div>
+<div class="flex items-center gap-1.5 text-caption text-secondary mt-0.5">
+<span class="material-symbols-outlined text-[13px]">local_hospital</span>
+<span class="truncate">Klinik Kesihatan Kelana Jaya</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-1.5 border-t border-surface-container text-caption font-data-mono-sm">
+<span class="text-secondary">MT-26-000304</span>
+<span class="text-secondary">Bilik 12 · Dr. Nurul</span>
+</div>
+</div>
+<!-- Card 3 (12 Feb) -->
+<div class="upcoming-item p-2.5 rounded bg-surface-container-lowest border-l-4 border-l-dept-jpj border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-event="jpj-inspect" onclick="loadEventDetail('jpj-inspect')">
+<div class="flex items-center justify-between text-caption font-data-mono-sm">
+<span class="text-secondary font-medium">KHAMIS · 12 FEB</span>
+<span class="text-secondary">02:15 PM</span>
+</div>
+<div class="font-label-default text-label-default text-primary mt-1 line-clamp-1">Pemeriksaan Fizikal Kenderaan (JPJ)</div>
+<div class="flex items-center gap-1.5 text-caption text-secondary mt-0.5">
+<span class="material-symbols-outlined text-[13px]">directions_car</span>
+<span class="truncate">JPJ Cawangan Padang Jawa</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-1.5 border-t border-surface-container text-caption font-data-mono-sm">
+<span class="text-secondary">MT-26-000418</span>
+<span class="text-secondary">Kaunter 4</span>
+</div>
+</div>
+<!-- Card 4 (15 Feb) -->
+<div class="upcoming-item p-2.5 rounded bg-surface-container-lowest border-l-4 border-l-dept-lhdn border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-event="lhdn-tax" onclick="loadEventDetail('lhdn-tax')">
+<div class="flex items-center justify-between text-caption font-data-mono-sm">
+<span class="text-secondary font-medium">AHAD · 15 FEB</span>
+<span class="text-secondary">10:00 AM</span>
+</div>
+<div class="font-label-default text-label-default text-primary mt-1 line-clamp-1">Sesi Kaunseling Taksiran e-Filing (LHDN)</div>
+<div class="flex items-center gap-1.5 text-caption text-secondary mt-0.5">
+<span class="material-symbols-outlined text-[13px]">video_call</span>
+<span class="truncate">Google Meet Kerajaan (Awan)</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-1.5 border-t border-surface-container text-caption font-data-mono-sm">
+<span class="text-secondary">MT-26-000789</span>
+<span class="text-dept-lhdn">Konsultasi Maya</span>
+</div>
+</div>
+</div>
+<!-- Sync badge note -->
+<div class="mt-auto pt-3 border-t border-surface-container text-[11px] font-data-mono-sm text-secondary flex items-center justify-between">
+<span class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+            Diselaraskan Google &amp; Apple
+          </span>
+<span>11:32:04</span>
+</div>
+</div>
+</aside>
+<!-- 2. CENTER MAIN CALENDAR WORKSPACE (Bulan / Minggu / Agenda) -->
+<main class="flex-1 flex flex-col overflow-y-auto bg-surface-container-lowest min-w-0" id="main-calendar-scroll">
+<!-- 7-Day Header Grid -->
+<div class="grid grid-cols-7 border-b border-surface-container bg-surface-container-low shrink-0 text-center text-caption font-label-sm text-secondary uppercase tracking-wider sticky top-0 z-10">
+<div class="py-2.5 border-r border-surface-container">Isnin</div>
+<div class="py-2.5 border-r border-surface-container">Selasa</div>
+<div class="py-2.5 border-r border-surface-container">Rabu</div>
+<div class="py-2.5 border-r border-surface-container">Khamis</div>
+<div class="py-2.5 border-r border-surface-container">Jumaat</div>
+<div class="py-2.5 border-r border-surface-container">Sabtu</div>
+<div class="py-2.5">Ahad</div>
+</div>
+<!-- MONTH VIEW GRID (February 2026: 1 Feb is Sunday -> starts on col 7) -->
+<div class="flex-1 grid grid-cols-7 auto-rows-fr min-h-[700px] border-b border-surface-container" id="calendar-month-grid">
+<!-- ROW 1 (Jan 26 - Feb 01) -->
+<!-- Jan 26 -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container bg-surface-container/30 text-secondary/40 font-data-mono-sm text-caption">26</div>
+<!-- Jan 27 -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container bg-surface-container/30 text-secondary/40 font-data-mono-sm text-caption">27</div>
+<!-- Jan 28 -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container bg-surface-container/30 text-secondary/40 font-data-mono-sm text-caption">28</div>
+<!-- Jan 29 -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container bg-surface-container/30 text-secondary/40 font-data-mono-sm text-caption">29</div>
+<!-- Jan 30 -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container bg-surface-container/30 text-secondary/40 font-data-mono-sm text-caption">30</div>
+<!-- Jan 31 -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container bg-surface-container/30 text-secondary/40 font-data-mono-sm text-caption">31</div>
+<!-- Feb 1 (Sunday) -->
+<div class="min-h-[110px] p-1.5 border-b border-surface-container font-data-mono-sm text-caption text-secondary">
+<div class="font-medium text-secondary">01</div>
+</div>
+<!-- ROW 2 (Feb 02 - Feb 08) -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">02</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">03</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">04</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">05</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">06</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-secondary">
+<span class="font-medium">07</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-b border-surface-container font-data-mono-sm text-caption text-secondary">
+<span class="font-medium">08</span>
+</div>
+<!-- ROW 3 (Feb 09 - Feb 15) -->
+<!-- 09 FEB (HARI INI) -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container bg-surface-container/20 flex flex-col gap-1">
+<div class="flex items-center justify-between font-data-mono-sm text-caption">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold">09</span>
+<span class="px-1.5 py-0.2 rounded bg-dept-localgov/10 text-dept-localgov font-semibold text-[10px]">HARI INI</span>
+</div>
+<!-- EVENT 1: MBPJ Tapak Longkang -->
+<div class="cal-event-card p-1.5 rounded bg-surface-container-lowest border-l-[3px] border-l-dept-localgov border border-surface-container hover:bg-surface-container cursor-pointer transition-all shadow-xs" data-agency="mbpj" onclick="loadEventDetail('mbpj-drain')">
+<div class="flex items-center justify-between text-[11px] font-data-mono-sm text-dept-localgov font-semibold">
+<span>11:30 AM</span>
+<span class="text-secondary text-[10px]">MT-26-000123</span>
+</div>
+<div class="font-label-sm text-label-sm text-primary font-semibold truncate leading-snug">Pemeriksaan Tapak Longkang KDEB</div>
+<div class="text-[11px] text-secondary truncate flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-[12px]">pin_drop</span>
+<span>Jalan 14/20 PJ</span>
+</div>
+</div>
+</div>
+<!-- 10 FEB -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container flex flex-col gap-1">
+<div class="font-data-mono-sm text-caption font-medium text-on-surface">10</div>
+<!-- EVENT 2: KKM Klinik -->
+<div class="cal-event-card p-1.5 rounded bg-surface-container-lowest border-l-[3px] border-l-dept-health border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-agency="kkm" onclick="loadEventDetail('kkm-clinic')">
+<div class="flex items-center justify-between text-[11px] font-data-mono-sm text-dept-health font-semibold">
+<span>09:00 AM</span>
+<span class="text-secondary text-[10px]">KKM</span>
+</div>
+<div class="font-label-sm text-label-sm text-primary font-semibold truncate leading-snug">Temujanji Klinik Kelana Jaya</div>
+<div class="text-[11px] text-secondary truncate flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-[12px]">medical_services</span>
+<span>Dr. Nurul Huda</span>
+</div>
+</div>
+</div>
+<!-- 11 FEB -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">11</span>
+</div>
+<!-- 12 FEB -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container flex flex-col gap-1">
+<div class="font-data-mono-sm text-caption font-medium text-on-surface">12</div>
+<!-- EVENT 3: JPJ Inspection -->
+<div class="cal-event-card p-1.5 rounded bg-surface-container-lowest border-l-[3px] border-l-dept-jpj border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-agency="jpj" onclick="loadEventDetail('jpj-inspect')">
+<div class="flex items-center justify-between text-[11px] font-data-mono-sm text-dept-jpj font-semibold">
+<span>02:15 PM</span>
+<span class="text-secondary text-[10px]">JPJ</span>
+</div>
+<div class="font-label-sm text-label-sm text-primary font-semibold truncate leading-snug">Pemeriksaan &amp; Cetakan Lesen</div>
+<div class="text-[11px] text-secondary truncate flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-[12px]">badge</span>
+<span>JPJ Padang Jawa</span>
+</div>
+</div>
+</div>
+<!-- 13 FEB -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">13</span>
+</div>
+<!-- 14 FEB -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-secondary">
+<span class="font-medium">14</span>
+</div>
+<!-- 15 FEB -->
+<div class="min-h-[110px] p-1.5 border-b border-surface-container flex flex-col gap-1">
+<div class="font-data-mono-sm text-caption font-medium text-secondary">15</div>
+<!-- EVENT 4: LHDN Taksiran e-Filing -->
+<div class="cal-event-card p-1.5 rounded bg-surface-container-lowest border-l-[3px] border-l-dept-lhdn border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-agency="lhdn" onclick="loadEventDetail('lhdn-tax')">
+<div class="flex items-center justify-between text-[11px] font-data-mono-sm text-dept-lhdn font-semibold">
+<span>10:00 AM</span>
+<span class="text-secondary text-[10px]">LHDN</span>
+</div>
+<div class="font-label-sm text-label-sm text-primary font-semibold truncate leading-snug">Semakan Pelepasan Cukai 2025</div>
+<div class="text-[11px] text-secondary truncate flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-[12px]">cast_connected</span>
+<span>Sesi Dalam Talian</span>
+</div>
+</div>
+</div>
+<!-- ROW 4 (Feb 16 - Feb 22) -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">16</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">17</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">18</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">19</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">20</span>
+</div>
+<!-- 21 FEB -->
+<div class="min-h-[110px] p-1.5 border-r border-b border-surface-container flex flex-col gap-1">
+<div class="font-data-mono-sm text-caption font-medium text-secondary">21</div>
+<!-- EVENT 5: Tarikh Akhir Cukai Jalan Proton X50 -->
+<div class="cal-event-card p-1.5 rounded bg-surface-container-lowest border-l-[3px] border-l-dept-jpj border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-agency="jpj" onclick="loadEventDetail('jpj-roadtax')">
+<div class="flex items-center justify-between text-[11px] font-data-mono-sm text-dept-jpj font-semibold">
+<span class="text-status-warning flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">warning</span>
+                STATUTORI
+              </span>
+<span class="text-secondary text-[10px]">JPJ</span>
+</div>
+<div class="font-label-sm text-label-sm text-primary font-semibold truncate leading-snug">Cukai Jalan: Proton X50</div>
+<div class="text-[11px] text-secondary truncate mt-0.5 font-data-mono-sm">BPL 8821 · Tamat Tempoh</div>
+</div>
+</div>
+<!-- 22 FEB -->
+<div class="min-h-[110px] p-1.5 border-b border-surface-container font-data-mono-sm text-caption text-secondary">
+<span class="font-medium">22</span>
+</div>
+<!-- ROW 5 (Feb 23 - Mar 01) -->
+<div class="min-h-[110px] p-1.5 border-r border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">23</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">24</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">25</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">26</span>
+</div>
+<div class="min-h-[110px] p-1.5 border-r border-surface-container font-data-mono-sm text-caption text-on-surface">
+<span class="font-medium">27</span>
+</div>
+<!-- 28 FEB -->
+<div class="min-h-[110px] p-1.5 border-r border-surface-container flex flex-col gap-1">
+<div class="font-data-mono-sm text-caption font-medium text-secondary">28</div>
+<!-- EVENT 6: Cukai Taksiran Penggal 1/2026 -->
+<div class="cal-event-card p-1.5 rounded bg-surface-container-lowest border-l-[3px] border-l-dept-localgov border border-surface-container hover:bg-surface-container cursor-pointer transition-all" data-agency="mbpj" onclick="loadEventDetail('mbpj-assessment')">
+<div class="flex items-center justify-between text-[11px] font-data-mono-sm text-dept-localgov font-semibold">
+<span class="text-status-warning flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">error</span>
+                AKHIR TEMPOH
+              </span>
+<span class="text-secondary text-[10px]">MBPJ</span>
+</div>
+<div class="font-label-sm text-label-sm text-primary font-semibold truncate leading-snug">Cukai Taksiran Penggal 1</div>
+<div class="text-[11px] text-secondary truncate mt-0.5 font-data-mono-sm">RM 184.20 · Bil MBPJ-04</div>
+</div>
+</div>
+<!-- 01 MAR -->
+<div class="min-h-[110px] p-1.5 bg-surface-container/30 text-secondary/40 font-data-mono-sm text-caption">01 Mac</div>
+</div>
+<!-- ALTERNATIVE AGENDA VIEW (Hidden by default) -->
+<div class="hidden p-6 space-y-4" id="calendar-agenda-view">
+<div class="flex items-center justify-between pb-3 border-b border-surface-container">
+<h3 class="font-headline-sm text-headline-sm text-primary">Agenda Temujanji &amp; Operasi Tapak (Februari 2026)</h3>
+<span class="text-caption font-data-mono-sm text-secondary">6 Entri Berjadual</span>
+</div>
+<div class="space-y-3" id="agenda-list-container">
+<!-- Populated dynamically via JS or rendered -->
+</div>
+</div>
+</main>
+<!-- 3. EVENT DETAIL POPOVER / RIGHT DRAWER PANE (~360px - 400px) -->
+<aside class="w-80 lg:w-96 border-l border-surface-container bg-surface-container-lowest flex flex-col shrink-0 overflow-y-auto" id="event-detail-drawer">
+<!-- Drawer Top Bar -->
+<div class="p-4 border-b border-surface-container flex items-center justify-between bg-surface-container-low shrink-0">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-dept-localgov" id="detail-agency-dot"></span>
+<span class="font-label-sm text-label-sm font-semibold text-primary" id="detail-agency-name">MBPJ · Kerajaan Tempatan</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded hover:bg-surface-container text-secondary hover:text-primary transition-colors" onclick="copyCaseId()" title="Salin No Kes">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container text-secondary hover:text-primary transition-colors" onclick="toggleDrawer()" title="Tutup Panel">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+</div>
+<!-- Drawer Content -->
+<div class="p-5 flex-1 flex flex-col gap-5 overflow-y-auto">
+<!-- Title & Reference ID -->
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-surface-container font-data-mono-sm text-caption text-primary font-medium" id="detail-case-badge">MT-26-000123</span>
+<span class="px-2 py-0.5 rounded-full bg-dept-localgov/10 text-dept-localgov font-label-sm text-caption font-semibold flex items-center gap-1" id="detail-status-pill">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov animate-pulse"></span>
+              Operasi Tapak
+            </span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-primary mt-2 leading-snug" id="detail-title">Operasi Penyelenggaraan Parit Seksyen 14</h3>
+<p class="font-body-sm text-body-sm text-secondary mt-1" id="detail-subtitle">Pembersihan mendapan kelodak dan sekatan aliran parit monsun KDEB Waste Management.</p>
+</div>
+<!-- Key Metadata Rows -->
+<div class="space-y-3.5 p-3.5 rounded bg-surface-container-low border border-surface-container">
+<!-- Time -->
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[18px] text-secondary shrink-0 mt-0.5">schedule</span>
+<div>
+<div class="font-label-sm text-caption text-secondary uppercase font-semibold">Masa &amp; Tempoh</div>
+<div class="font-body-sm-medium text-body-sm-medium text-primary mt-0.5" id="detail-time">Isnin, 09 Februari 2026 · 11:30 AM - 01:00 PM</div>
+<div class="font-data-mono-sm text-caption text-secondary">Anggaran: 1 jam 30 minit (MYT)</div>
+</div>
+</div>
+<!-- Location -->
+<div class="flex items-start gap-3 pt-2.5 border-t border-surface-container">
+<span class="material-symbols-outlined text-[18px] text-secondary shrink-0 mt-0.5">location_on</span>
+<div>
+<div class="font-label-sm text-caption text-secondary uppercase font-semibold">Lokasi Tapak</div>
+<div class="font-body-sm text-body-sm text-primary mt-0.5" id="detail-address">Jalan 14/20, Seksyen 14, 46100 Petaling Jaya, Selangor</div>
+<div class="inline-flex items-center gap-1 text-[11px] font-data-mono-sm text-dept-localgov mt-1 bg-dept-localgov/5 px-1.5 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px]">my_location</span>
+<span id="detail-coordinates">3.1128° N, 101.6322° E (Zon MBPJ 7)</span>
+</div>
+</div>
+</div>
+<!-- Officers / Contractor -->
+<div class="flex items-start gap-3 pt-2.5 border-t border-surface-container">
+<span class="material-symbols-outlined text-[18px] text-secondary shrink-0 mt-0.5">badge</span>
+<div>
+<div class="font-label-sm text-caption text-secondary uppercase font-semibold">Pegawai Bertanggungjawab &amp; Pasukan</div>
+<div class="font-body-sm-medium text-body-sm-medium text-primary mt-0.5" id="detail-officer">Ir. Zamri (MBPJ Bahagian Kejuruteraan)</div>
+<div class="font-body-sm text-caption text-secondary" id="detail-contractor">Pasukan Kontraktor KDEB Waste Management (Trak No. WX-4102)</div>
+</div>
+</div>
+</div>
+<!-- Preparation Checklist (Senarai Semak Persediaan) -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<h4 class="font-label-default text-label-default text-primary font-semibold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary">checklist</span>
+<span>Senarai Semak Persediaan</span>
+</h4>
+<span class="font-data-mono-sm text-caption text-secondary" id="checklist-progress">2 / 4 Selesai</span>
+</div>
+<div class="space-y-2" id="checklist-container">
+<!-- Item 1 -->
+<label class="flex items-start gap-2.5 p-2.5 rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors border border-surface-container">
+<input checked="" class="mt-0.5 w-4 h-4 rounded text-primary focus:ring-0" onchange="updateChecklist(this)" type="checkbox"/>
+<div class="text-caption">
+<span class="font-medium text-on-surface line-through text-secondary">Pastikan kenderaan dialihkan dari rizab parit hadapan premis</span>
+<span class="block text-[11px] font-data-mono-sm text-status-success mt-0.5">Disahkan oleh Pemilik Premis</span>
+</div>
+</label>
+<!-- Item 2 -->
+<label class="flex items-start gap-2.5 p-2.5 rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors border border-surface-container">
+<input checked="" class="mt-0.5 w-4 h-4 rounded text-primary focus:ring-0" onchange="updateChecklist(this)" type="checkbox"/>
+<div class="text-caption">
+<span class="font-medium text-on-surface line-through text-secondary">Benarkan akses pagar luar sekiranya longkang bertutup</span>
+<span class="block text-[11px] font-data-mono-sm text-status-success mt-0.5">Kunci pagar dibuka jam 11:00 AM</span>
+</div>
+</label>
+<!-- Item 3 -->
+<label class="flex items-start gap-2.5 p-2.5 rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors border border-surface-container">
+<input class="mt-0.5 w-4 h-4 rounded text-primary focus:ring-0" onchange="updateChecklist(this)" type="checkbox"/>
+<div class="text-caption">
+<span class="font-medium text-on-surface">Sedia untuk menandatangani borang pengesahan kerja fizikal kontraktor</span>
+<span class="block text-[11px] font-data-mono-sm text-secondary mt-0.5">Menunggu ketibaan penyelia tapak</span>
+</div>
+</label>
+<!-- Item 4 -->
+<label class="flex items-start gap-2.5 p-2.5 rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors border border-surface-container">
+<input class="mt-0.5 w-4 h-4 rounded text-primary focus:ring-0" onchange="updateChecklist(this)" type="checkbox"/>
+<div class="text-caption">
+<span class="font-medium text-on-surface">Ambil gambar bukti selepas pembersihan selesai untuk rekod MyTadbir</span>
+<span class="block text-[11px] font-data-mono-sm text-secondary mt-0.5">Muat naik ke aduan MT-26-000123</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Action Row -->
+<div class="space-y-2 pt-2 border-t border-surface-container mt-auto">
+<div class="grid grid-cols-2 gap-2">
+<button class="h-9 px-3 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm flex items-center justify-center gap-1.5 transition-colors" onclick="rescheduleEvent()">
+<span class="material-symbols-outlined text-[16px]">edit_calendar</span>
+<span>Jadual Semula</span>
+</button>
+<button class="h-9 px-3 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm flex items-center justify-center gap-1.5 transition-colors" onclick="downloadICS()">
+<span class="material-symbols-outlined text-[16px]">event</span>
+<span>Eksport (.ics)</span>
+</button>
+</div>
+<a class="w-full h-9 px-3 rounded bg-primary hover:bg-on-tertiary-container text-on-primary font-label-sm text-label-sm flex items-center justify-center gap-1.5 transition-colors shadow-xs" href="#cases" onclick="openCaseLink()">
+<span class="material-symbols-outlined text-[16px]">folder_open</span>
+<span id="detail-open-case-btn">Buka Kes Penuh MT-26-000123</span>
+</a>
+</div>
+<!-- Sovereign Verification Stamp -->
+<div class="p-2.5 rounded bg-surface-container-low border border-surface-container text-caption font-data-mono-sm text-secondary space-y-1">
+<div class="flex items-center justify-between">
+<span class="flex items-center gap-1 text-status-success font-semibold text-[11px]">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+              Audit MyTadbir Sah
+            </span>
+<span class="text-[10px]">GovCert MY</span>
+</div>
+<div class="text-[10px] truncate text-secondary">SHA-256: 7f8a9e4c11b0e59a88d7213ff2b4e2</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- BOOKING / NEW APPOINTMENT MODAL (Standard Institutional Overlay) -->
+<div class="fixed inset-0 z-50 hidden bg-primary/40 flex items-center justify-center p-4" id="booking-modal">
+<div class="w-full max-w-lg bg-surface-container-lowest rounded-lg border border-surface-container shadow-2xl overflow-hidden flex flex-col">
+<div class="px-5 py-4 border-b border-surface-container flex items-center justify-between bg-surface-container-low">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Tempahan Temujanji Rasmi Baharu</h3>
+<p class="font-body-sm text-body-sm text-secondary">Pilih agensi kerajaan, cawangan, dan slot masa yang tersedia.</p>
+</div>
+<button class="p-1.5 rounded hover:bg-surface-container text-secondary hover:text-primary" onclick="closeBookingModal()">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<form class="p-5 space-y-4" onsubmit="handleBookingSubmit(event)">
+<!-- Agency Selection -->
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Agensi Kerajaan / Jabatan</label>
+<select class="w-full h-10 px-3 rounded border border-surface-container bg-surface-container-lowest font-body-sm text-on-surface focus:outline-none focus:border-primary" required="">
+<option value="">Pilih Agensi...</option>
+<option value="mbpj">MBPJ — Majlis Bandaraya Petaling Jaya</option>
+<option value="jpj">JPJ — Jabatan Pengangkutan Jalan Malaysia</option>
+<option value="kkm">KKM — Kementerian Kesihatan Malaysia</option>
+<option value="lhdn">LHDN — Lembaga Hasil Dalam Negeri</option>
+<option value="jps">JPS — Jabatan Pengairan dan Saliran</option>
+</select>
+</div>
+<!-- Case Link / Reference Number -->
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Kaitkan dengan No. Kes / Aduan (Pilihan)</label>
+<input class="w-full h-10 px-3 rounded border border-surface-container bg-surface-container-lowest font-data-mono-sm text-caption text-on-surface focus:outline-none focus:border-primary" placeholder="Contoh: MT-26-000123" type="text"/>
+</div>
+<!-- Date & Slot Picker -->
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Tarikh Cadangan</label>
+<input class="w-full h-10 px-3 rounded border border-surface-container bg-surface-container-lowest font-data-mono-sm text-caption text-on-surface focus:outline-none focus:border-primary" type="date" value="2026-02-16"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Slot Masa</label>
+<select class="w-full h-10 px-3 rounded border border-surface-container bg-surface-container-lowest font-body-sm text-on-surface focus:outline-none focus:border-primary">
+<option>09:00 AM - 10:00 AM</option>
+<option>10:30 AM - 11:30 AM</option>
+<option>02:00 PM - 03:00 PM</option>
+<option>03:30 PM - 04:30 PM</option>
+</select>
+</div>
+</div>
+<!-- Purpose / Remarks -->
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Tujuan Temujanji / Perihal Dokumen</label>
+<textarea class="w-full p-2.5 rounded border border-surface-container bg-surface-container-lowest font-body-sm text-caption text-on-surface focus:outline-none focus:border-primary" placeholder="Contoh: Pengesahan geran fizikal dan pengeluaran kad perakuan..." rows="2.5"></textarea>
+</div>
+<!-- Digital ID Signoff Notification -->
+<div class="p-3 rounded bg-surface-container-low border border-surface-container flex items-center gap-2 text-caption font-body-sm text-secondary">
+<span class="material-symbols-outlined text-[18px] text-dept-localgov">fingerprint</span>
+<span>Temujanji ini akan disahkan melalui MyDigital ID yang dipautkan ke akaun Ahmad Harith.</span>
+</div>
+<div class="pt-2 flex items-center justify-end gap-2 border-t border-surface-container">
+<button class="h-9 px-4 rounded border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm transition-colors" onclick="closeBookingModal()" type="button">Batal</button>
+<button class="h-9 px-4 rounded bg-primary hover:bg-on-tertiary-container text-on-primary font-label-sm text-label-sm transition-colors shadow-xs" type="submit">Sahkan Temujanji</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<script>
+  // Event Repository Data for MyTadbir Calendar
+  const calendarEvents = {
+    'mbpj-drain': {
+      id: 'MT-26-000123',
+      agency: 'MBPJ · Kerajaan Tempatan',
+      agencyColor: '#0F766E',
+      status: 'Operasi Tapak',
+      statusColor: 'text-dept-localgov',
+      statusBg: 'bg-dept-localgov/10',
+      title: 'Operasi Penyelenggaraan Parit Seksyen 14',
+      subtitle: 'Pembersihan mendapan kelodak dan sekatan aliran parit monsun KDEB Waste Management.',
+      time: 'Isnin, 09 Februari 2026 · 11:30 AM - 01:00 PM',
+      duration: 'Anggaran: 1 jam 30 minit (MYT)',
+      address: 'Jalan 14/20, Seksyen 14, 46100 Petaling Jaya, Selangor',
+      coordinates: '3.1128° N, 101.6322° E (Zon MBPJ 7)',
+      officer: 'Ir. Zamri (MBPJ Bahagian Kejuruteraan)',
+      contractor: 'Pasukan Kontraktor KDEB Waste Management (Trak No. WX-4102)',
+      checklist: [
+        { text: 'Pastikan kenderaan dialihkan dari rizab parit hadapan premis', note: 'Disahkan oleh Pemilik Premis', done: true },
+        { text: 'Benarkan akses pagar luar sekiranya longkang bertutup', note: 'Kunci pagar dibuka jam 11:00 AM', done: true },
+        { text: 'Sedia untuk menandatangani borang pengesahan kerja fizikal kontraktor', note: 'Menunggu ketibaan penyelia tapak', done: false },
+        { text: 'Ambil gambar bukti selepas pembersihan selesai untuk rekod MyTadbir', note: 'Muat naik ke aduan MT-26-000123', done: false }
+      ]
+    },
+    'kkm-clinic': {
+      id: 'MT-26-000304',
+      agency: 'KKM · Kementerian Kesihatan Malaysia',
+      agencyColor: '#DC2626',
+      status: 'Temujanji Sah',
+      statusColor: 'text-dept-health',
+      statusBg: 'bg-dept-health/10',
+      title: 'Temujanji Rawatan Pesakit Luar (KKM)',
+      subtitle: 'Konsultasi berkala kesihatan am, pemeriksaan tekanan darah dan pembaharuan preskripsi.',
+      time: 'Selasa, 10 Februari 2026 · 09:00 AM - 10:30 AM',
+      duration: 'Slot Sesi: Bilik Rawatan 12',
+      address: 'Klinik Kesihatan Kelana Jaya, Jalan SS 6/3, Kelana Jaya, 47301 PJ',
+      coordinates: '3.1012° N, 101.5976° E (Kaunter Saringan B)',
+      officer: 'Dr. Nurul Huda binti Sulaiman (Pegawai Perubatan UD52)',
+      contractor: 'Jururawat Masyarakat Kanan Pn. Zainab',
+      checklist: [
+        { text: 'Bawa Kad Pengenalan fizikal MyKad atau MyDigital ID telefon', note: 'Wajib untuk pendaftaran biometrik', done: true },
+        { text: 'Puasa 8 jam sekiranya ujian profil lipid diperlukan', note: 'Bermula 12:00 tengah malam', done: true },
+        { text: 'Bawa buku rekod kesihatan dan kad rawatan terdahulu', note: 'Sedia dalam fail fizikal', done: false },
+        { text: 'Tiba 15 minit awal sebelum waktu temujanji', note: 'Nombor giliran dijana di kiosk', done: false }
+      ]
+    },
+    'jpj-inspect': {
+      id: 'MT-26-000418',
+      agency: 'JPJ · Jabatan Pengangkutan Jalan',
+      agencyColor: '#EA580C',
+      status: 'Pemeriksaan Sah',
+      statusColor: 'text-dept-jpj',
+      statusBg: 'bg-dept-jpj/10',
+      title: 'Pemeriksaan Fizikal Kenderaan & Cetakan Lesen',
+      subtitle: 'Pengesahan identiti nombor enjin & casis sebelum kelulusan pembaharuan cukai jalan.',
+      time: 'Khamis, 12 Februari 2026 · 02:15 PM - 03:00 PM',
+      duration: 'Tempoh: 45 minit (Lorong 2)',
+      address: 'JPJ Negeri Selangor, Cawangan Padang Jawa, 40620 Shah Alam',
+      coordinates: '3.0567° N, 101.4889° E (Lorong Pemeriksaan 2)',
+      officer: 'En. Faizal bin Zakaria (Pemeriksa Kenderaan JPJ W29)',
+      contractor: 'Unit Operasi Bahagian Pelesenan Kenderaan',
+      checklist: [
+        { text: 'Bawa Sijil Pemilikan Kenderaan (VOC / Geran Asal)', note: 'Wajib dokumen fizikal', done: true },
+        { text: 'Pastikan cermin kenderaan mematuhi piawaian VLT JPJ', note: 'Pemeriksaan ketelusan cahaya', done: true },
+        { text: 'Sediakan resit bayaran fi pemeriksaan RM35.00', note: 'Diselesaikan melalui MyTadbir Pay', done: true },
+        { text: 'Bawa resit pendaftaran temu janji digital MT-26-000418', note: 'Tunjuk kod QR di kaunter', done: false }
+      ]
+    },
+    'lhdn-tax': {
+      id: 'MT-26-000789',
+      agency: 'LHDN · Lembaga Hasil Dalam Negeri',
+      agencyColor: '#CA8A04',
+      status: 'Sesi Maya',
+      statusColor: 'text-dept-lhdn',
+      statusBg: 'bg-dept-lhdn/10',
+      title: 'Sesi Semakan Pelepasan Cukai Tahun Taksiran 2025',
+      subtitle: 'Konsultasi e-Filing individu, semakan resit perubatan, insurans dan potongan zakat.',
+      time: 'Ahad, 15 Februari 2026 · 10:00 AM - 10:45 AM',
+      duration: 'Platform: Google Meet Kerajaan (Pautan Disahkan)',
+      address: 'Dalam Talian (Awan MyGovCloud / Meet Rasmi LHDN)',
+      coordinates: 'Pautan Selamat: meet.gov.my/lhdn-tax-000789',
+      officer: 'Puan Maznah binti Razali (Penolong Pengarah Taksiran)',
+      contractor: 'Cawangan Petaling Jaya (Menara Hasil)',
+      checklist: [
+        { text: 'Muat naik penyata gaji EA / EC tahun 2025 ke portal', note: 'Telah dimuat naik 02 Feb', done: true },
+        { text: 'Sediakan resit pembelian komputer, buku dan sukan (Gaya Hidup)', note: 'Format PDF berasingan', done: false },
+        { text: 'Semak penyata caruman KWSP & PERKESO terkini', note: 'Jana dari i-Akaun', done: false }
+      ]
+    },
+    'jpj-roadtax': {
+      id: 'MT-26-000418-L',
+      agency: 'JPJ · Peringatan Statutori',
+      agencyColor: '#EA580C',
+      status: 'Tamat Tempoh',
+      statusColor: 'text-dept-jpj',
+      statusBg: 'bg-dept-jpj/10',
+      title: 'Tarikh Akhir: Pembaharuan Cukai Jalan Proton X50',
+      subtitle: 'Peringatan tamat tempoh sah laku lesen kenderaan motor (LKM). Elakkan saman penguatkuasaan.',
+      time: 'Sabtu, 21 Februari 2026 · 11:59 PM (Tamat Tempoh)',
+      duration: 'Tindakan diperlukan sebelum jam 23:59',
+      address: 'Secara Digital Melalui Aplikasi MyTadbir atau Kiosk JPJ',
+      coordinates: 'Sistem JPJeBid & MySikap Gateway',
+      officer: 'Sistem Automasi JPJ Penguatkuasaan',
+      contractor: 'Polis Diraja Malaysia (PDRM Trafik) & JPJ Cawangan',
+      checklist: [
+        { text: 'Selesaikan pembaharuan polisi insurans kenderaan komprehensif', note: 'Etiqa Takaful sah sehingga Feb 2027', done: true },
+        { text: 'Buat bayaran pembaharuan LKM (RM 90.00)', note: 'Belum dibayar', done: false },
+        { text: 'Muat turun salinan digital e-LKM ke peranti', note: 'Selepas bayaran disahkan', done: false }
+      ]
+    },
+    'mbpj-assessment': {
+      id: 'MBPJ-26-TAX-01',
+      agency: 'MBPJ · Jabatan Kewangan',
+      agencyColor: '#0F766E',
+      status: 'Tarikh Akhir Statutori',
+      statusColor: 'text-dept-localgov',
+      statusBg: 'bg-dept-localgov/10',
+      title: 'Tarikh Akhir Bayaran Cukai Taksiran Penggal 1/2026',
+      subtitle: 'Bayaran cukai pintu bagi premis di Seksyen 14 Petaling Jaya mengikut Akta Kerajaan Tempatan 1976.',
+      time: 'Sabtu, 28 Februari 2026 · 11:59 PM (Tarikh Akhir)',
+      duration: 'Tertakluk kepada denda lewat RM20 jika lewat',
+      address: 'Portal MyTadbir / Kaunter Bayaran Ibu Pejabat MBPJ Menara Bandaraya',
+      coordinates: 'Sistem Bayaran ePBT MBPJ',
+      officer: 'Bahagian Cukai Taksiran & Hasil MBPJ',
+      contractor: 'Unit Kutipan Hasil Majlis Bandaraya Petaling Jaya',
+      checklist: [
+        { text: 'Semak bil taksiran nombor akaun: 1400294102', note: 'Jumlah: RM 184.20', done: true },
+        { text: 'Buat bayaran penuh melalui gerbang FPX atau kad kredit', note: 'Menunggu proses pembayar', done: false },
+        { text: 'Simpan resit rasmi berakreditasi MBPJ', note: 'Resit dimuat ke tab Dokumen', done: false }
+      ]
+    }
+  };
+
+  // Populate or update the drawer
+  function loadEventDetail(eventId) {
+    const data = calendarEvents[eventId];
+    if (!data) return;
+
+    // Update Drawer Elements
+    document.getElementById('detail-agency-dot').style.backgroundColor = data.agencyColor;
+    document.getElementById('detail-agency-name').innerText = data.agency;
+    document.getElementById('detail-case-badge').innerText = data.id;
+
+    const pill = document.getElementById('detail-status-pill');
+    pill.className = `px-2 py-0.5 rounded-full ${data.statusBg} ${data.statusColor} font-label-sm text-caption font-semibold flex items-center gap-1`;
+    pill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full" style="background-color: ${data.agencyColor}"></span>${data.status}`;
+
+    document.getElementById('detail-title').innerText = data.title;
+    document.getElementById('detail-subtitle').innerText = data.subtitle;
+    document.getElementById('detail-time').innerText = data.time;
+    document.getElementById('detail-address').innerText = data.address;
+    document.getElementById('detail-coordinates').innerText = data.coordinates;
+    document.getElementById('detail-officer').innerText = data.officer;
+    document.getElementById('detail-contractor').innerText = data.contractor;
+    document.getElementById('detail-open-case-btn').innerText = `Buka Kes Penuh ${data.id}`;
+
+    // Rebuild Checklist
+    const chkContainer = document.getElementById('checklist-container');
+    chkContainer.innerHTML = '';
+    let doneCount = 0;
+
+    data.checklist.forEach((item, index) => {
+      if (item.done) doneCount++;
+      const itemEl = document.createElement('label');
+      itemEl.className = 'flex items-start gap-2.5 p-2.5 rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors border border-surface-container';
+      itemEl.innerHTML = `
+        <input type="checkbox" ${item.done ? 'checked' : ''} onchange="updateChecklist(this)" class="mt-0.5 w-4 h-4 rounded text-primary focus:ring-0">
+        <div class="text-caption">
+          <span class="font-medium text-on-surface ${item.done ? 'line-through text-secondary' : ''}">${item.text}</span>
+          <span class="block text-[11px] font-data-mono-sm ${item.done ? 'text-status-success' : 'text-secondary'} mt-0.5">${item.note}</span>
+        </div>
+      `;
+      chkContainer.appendChild(itemEl);
+    });
+
+    document.getElementById('checklist-progress').innerText = `${doneCount} / ${data.checklist.length} Selesai`;
+
+    // Open drawer if hidden
+    const drawer = document.getElementById('event-detail-drawer');
+    drawer.classList.remove('hidden');
+
+    // Highlight active card in upcoming list
+    document.querySelectorAll('.upcoming-item').forEach(card => {
+      if (card.dataset.event === eventId) {
+        card.classList.add('bg-surface-container', 'shadow-sm');
+      } else {
+        card.classList.remove('bg-surface-container', 'shadow-sm');
+      }
+    });
+  }
+
+  // Toggle checklist checkbox state
+  function updateChecklist(input) {
+    const parentLabel = input.closest('label');
+    const textSpan = parentLabel.querySelector('span.font-medium');
+    const subNote = parentLabel.querySelector('span.block');
+
+    if (input.checked) {
+      textSpan.classList.add('line-through', 'text-secondary');
+      subNote.classList.remove('text-secondary');
+      subNote.classList.add('text-status-success');
+      subNote.innerText = 'Selesai disemak';
+    } else {
+      textSpan.classList.remove('line-through', 'text-secondary');
+      subNote.classList.remove('text-status-success');
+      subNote.classList.add('text-secondary');
+      subNote.innerText = 'Menunggu tindakan';
+    }
+
+    const allChk = document.querySelectorAll('#checklist-container input[type="checkbox"]');
+    const checked = Array.from(allChk).filter(c => c.checked).length;
+    document.getElementById('checklist-progress').innerText = `${checked} / ${allChk.length} Selesai`;
+  }
+
+  // Agency filter toggling
+  function filterAgency(btn, agencyKey) {
+    document.querySelectorAll('.agency-pill').forEach(b => {
+      b.className = 'agency-pill h-7 px-2.5 rounded-full bg-surface-container-lowest border border-surface-container hover:bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center gap-1.5 transition-colors';
+    });
+    btn.className = 'agency-pill h-7 px-2.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1.5 transition-colors';
+
+    const cards = document.querySelectorAll('.cal-event-card');
+    cards.forEach(card => {
+      if (agencyKey === 'all' || card.dataset.agency === agencyKey) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  // View modes: month, week, agenda
+  function switchView(mode) {
+    const monthBtn = document.getElementById('view-month-btn');
+    const weekBtn = document.getElementById('view-week-btn');
+    const agendaBtn = document.getElementById('view-agenda-btn');
+    const grid = document.getElementById('calendar-month-grid');
+    const agendaView = document.getElementById('calendar-agenda-view');
+
+    [monthBtn, weekBtn, agendaBtn].forEach(b => {
+      b.className = 'px-2.5 py-1 rounded text-secondary hover:text-primary';
+    });
+
+    if (mode === 'month') {
+      monthBtn.className = 'px-2.5 py-1 rounded bg-surface-container-lowest text-primary font-semibold shadow-xs';
+      grid.classList.remove('hidden');
+      agendaView.classList.add('hidden');
+    } else if (mode === 'agenda') {
+      agendaBtn.className = 'px-2.5 py-1 rounded bg-surface-container-lowest text-primary font-semibold shadow-xs';
+      grid.classList.add('hidden');
+      agendaView.classList.remove('hidden');
+      renderAgendaView();
+    } else {
+      weekBtn.className = 'px-2.5 py-1 rounded bg-surface-container-lowest text-primary font-semibold shadow-xs';
+      alert('Paparan Minggu 7 (09 Feb - 15 Feb) diaktifkan secara padat.');
+    }
+  }
+
+  function renderAgendaView() {
+    const container = document.getElementById('agenda-list-container');
+    container.innerHTML = '';
+
+    Object.keys(calendarEvents).forEach(key => {
+      const ev = calendarEvents[key];
+      const item = document.createElement('div');
+      item.className = 'p-3.5 rounded bg-surface-container-lowest border border-surface-container hover:bg-surface-container cursor-pointer transition-colors flex items-center justify-between';
+      item.onclick = () => loadEventDetail(key);
+      item.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-1.5 h-10 rounded-full" style="background-color: ${ev.agencyColor}"></div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-data-mono-sm text-caption text-secondary">${ev.id}</span>
+              <span class="font-label-sm text-caption ${ev.statusColor} font-semibold">${ev.agency}</span>
+            </div>
+            <div class="font-headline-sm text-label-default text-primary font-semibold mt-0.5">${ev.title}</div>
+            <div class="text-caption text-secondary flex items-center gap-2 mt-0.5">
+              <span>${ev.time}</span>
+              <span>·</span>
+              <span class="truncate max-w-md">${ev.address}</span>
+            </div>
+          </div>
+        </div>
+        <button class="h-8 px-3 rounded bg-surface-container text-on-surface text-label-sm font-label-sm flex items-center gap-1 hover:bg-surface-container-high shrink-0">
+          <span>Perincian</span>
+          <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        </button>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function toggleDrawer() {
+    const drawer = document.getElementById('event-detail-drawer');
+    drawer.classList.toggle('hidden');
+  }
+
+  function copyCaseId() {
+    const id = document.getElementById('detail-case-badge').innerText;
+    navigator.clipboard.writeText(id).then(() => {
+      alert(`No. Rujukan Kes ${id} berjaya disalin ke papan klip.`);
+    }).catch(() => {
+      alert(`No. Kes: ${id}`);
+    });
+  }
+
+  function downloadICS() {
+    alert('Fail temujanji MyTadbir-Kalendar-2026.ics sedang dimuat turun untuk penyelarasan Google Calendar / Apple iCal.');
+  }
+
+  function rescheduleEvent() {
+    alert('Permintaan jadual semula dihantar ke modul temu janji rasmi.');
+  }
+
+  function openCaseLink() {
+    const id = document.getElementById('detail-case-badge').innerText;
+    console.log('Navigating to full case dossier:', id);
+  }
+
+  function openBookingModal() {
+    document.getElementById('booking-modal').classList.remove('hidden');
+  }
+
+  function closeBookingModal() {
+    document.getElementById('booking-modal').classList.add('hidden');
+  }
+
+  function handleBookingSubmit(e) {
+    e.preventDefault();
+    alert('Temujanji rasmi baharu berjaya dihantar ke agensi. Notifikasi SMS dan emel pengesahan sedang diproses.');
+    closeBookingModal();
+  }
+
+  function navDate(direction) {
+    const label = document.getElementById('current-month-label');
+    if (direction > 0) {
+      label.innerText = 'Mac 2026';
+    } else {
+      label.innerText = 'Januari 2026';
+    }
+  }
+
+  function navToday() {
+    document.getElementById('current-month-label').innerText = 'Februari 2026';
+    loadEventDetail('mbpj-drain');
+  }
+
+  // Auto-init: load the primary event detail on initial load
+  window.addEventListener('DOMContentLoaded', () => {
+    loadEventDetail('mbpj-drain');
+  });
+</script></main>
+</div>
+<script>
+    lucide.createIcons();
+
+    function setViewMode(mode) {
+      const gridBtn = document.getElementById('btn-view-grid');
+      const listBtn = document.getElementById('btn-view-list');
+      const gridView = document.getElementById('grid-view-cards');
+      const listView = document.getElementById('list-view-table');
+
+      if (mode === 'grid') {
+        gridBtn.className = "px-2 py-1 rounded bg-white text-ink shadow-sm flex items-center gap-1 font-medium transition-all";
+        listBtn.className = "px-2 py-1 rounded text-muted hover:text-ink flex items-center gap-1 font-medium transition-all";
+        gridView.classList.remove('hidden');
+        listView.classList.add('hidden');
+      } else {
+        listBtn.className = "px-2 py-1 rounded bg-white text-ink shadow-sm flex items-center gap-1 font-medium transition-all";
+        gridBtn.className = "px-2 py-1 rounded text-muted hover:text-ink flex items-center gap-1 font-medium transition-all";
+        gridView.classList.add('hidden');
+        listView.classList.remove('hidden');
+      }
+    }
+
+    function selectDoc(docId) {
+      // Highlights selected preview card
+      console.log('Document selected:', docId);
+    }
+
+    function filterType(btn, type) {
+      const buttons = btn.parentElement.querySelectorAll('button');
+      buttons.forEach(b => {
+        b.className = "w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-surface-2 text-ink-2 text-left transition-colors";
+      });
+      btn.className = "w-full flex items-center justify-between px-2 py-1.5 rounded bg-ink text-white font-medium text-left transition-colors";
+    }
+
+    function resetFilters() {
+      alert('Semua penapis dokumen telah ditetapkan semula.');
+    }
+  </script>
+</body></html>

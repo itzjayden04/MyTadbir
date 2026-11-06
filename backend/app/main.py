@@ -182,6 +182,7 @@ def _case_out(c: Case) -> dict:
             "primary_department": c.primary_department, "current_department": c.current_department,
             "confidence": c.confidence, "verify_flag": c.verify_flag, "status": c.status,
             "chain": ctx.get("handoff_chain", []), "result": (ctx.get("scratch") or {}).get("result"),
+            "level": (ctx.get("scratch") or {}).get("level") or ctx.get("level"), "level_reasons": ctx.get("level_reasons", []),
             "wrap": (ctx.get("scratch") or {}).get("reasoning_next_steps"),
             "created_at": c.created_at.isoformat(), "updated_at": c.updated_at.isoformat()}
 

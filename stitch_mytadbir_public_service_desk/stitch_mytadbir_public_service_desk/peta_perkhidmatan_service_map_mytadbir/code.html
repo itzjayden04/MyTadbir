@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="ms"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>App Shell &amp; Sidebar · MyTadbir</title>
+<!-- Tailwind Play CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Google Fonts: Plus Jakarta Sans, IBM Plex Sans, IBM Plex Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Plus Jakarta Sans"', 'sans-serif'],
+            sans: ['"IBM Plex Sans"', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'monospace'],
+          },
+          colors: {
+            bg: '#FFFFFF',
+            surface: '#FAFAFA',
+            'surface-2': '#F4F4F5',
+            line: '#E4E4E7',
+            'line-strong': '#D4D4D8',
+            ink: '#09090B',
+            'ink-2': '#3F3F46',
+            muted: '#71717A',
+            // Department semantic tokens
+            dept: {
+              health: '#DC2626',
+              education: '#2563EB',
+              localgov: '#0F766E',
+              immigration: '#7C3AED',
+              jpj: '#EA580C',
+              lhdn: '#CA8A04',
+              jkm: '#DB2777',
+              police: '#1E3A8A',
+              agri: '#16A34A',
+              cross: '#475569',
+            },
+            // Status tokens
+            status: {
+              success: '#15803D',
+              warning: '#B45309',
+              danger: '#B91C1C',
+              info: '#1D4ED8',
+              neutral: '#52525B',
+            }
+          },
+          boxShadow: {
+            floating: '0 8px 24px rgba(0,0,0,0.08)',
+            'floating-lg': '0 12px 32px rgba(0,0,0,0.12)',
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D4D4D8;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #A1A1AA;
+    }
+    
+    .sidebar-resizing {
+      user-select: none;
+      cursor: col-resize;
+    }
+
+    /* Subtle pulse animation for agent status */
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+    .status-pulse {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .rotate-180-custom {
+      transform: rotate(180deg);
+    }
+  </style>
+<meta content="web_dashboard" name="shell-type"/></head>
+<body class="h-full bg-white text-ink font-sans antialiased overflow-hidden flex flex-col select-none">
+<!-- TOP APP BAR -->
+<header class="h-14 border-b border-line bg-white flex items-center justify-between px-4 z-20 shrink-0">
+<div class="flex items-center gap-3">
+<!-- Mobile / rail expand button -->
+<button class="p-1.5 rounded text-ink hover:bg-surface-2 transition-colors" id="toggle-sidebar-btn" title="Toggle Sidebar (Ctrl+[)">
+<i class="w-4 h-4" data-lucide="panel-left-close" id="sidebar-icon"></i>
+</button>
+<!-- Breadcrumbs / Page Title -->
+<div class="flex items-center gap-2">
+<span class="font-display font-bold text-sm tracking-tight" id="header-page-title">Permintaan Baharu</span>
+<span class="text-line-strong text-xs font-mono">/</span>
+<!-- Active Case Chip -->
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2 border border-line text-xs font-mono text-ink-2">
+<span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
+<span class="font-medium">MT-26-000123</span>
+<span class="text-muted">·</span>
+<span class="text-muted text-[11px]" id="case-status-text">Dalam Proses</span>
+</div>
+</div>
+</div>
+<!-- Center Agent Status Pill -->
+<div class="hidden md:flex items-center">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-line text-xs">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-dept-localgov opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-dept-localgov"></span>
+</span>
+<span class="font-medium text-ink-2 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+<span>Kerajaan Tempatan (MBPJ)</span>
+<span class="text-muted">·</span>
+<span class="text-muted">Incident dispatcher active</span>
+</span>
+</div>
+</div>
+<!-- Right Controls: Role Badge, Language Switch, Right Panel Toggle -->
+<div class="flex items-center gap-2.5">
+<!-- Role View Toggle (Simulating Citizen vs Officer) -->
+<div class="hidden lg:flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+<button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all" id="role-citizen-btn" onclick="setRole('citizen')">Awam (Citizen)</button>
+<button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all" id="role-officer-btn" onclick="setRole('officer')">Pegawai (Officer)</button>
+</div>
+<!-- Bilateral BM / EN segmented switch -->
+<div class="flex items-center bg-surface-2 p-0.5 rounded border border-line text-[11px] font-mono">
+<button class="px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all" id="lang-bm" onclick="setLang('BM')">BM</button>
+<button class="px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all" id="lang-en" onclick="setLang('EN')">EN</button>
+</div>
+<!-- Divider -->
+<div class="h-4 w-[1px] bg-line"></div>
+<!-- Right Panel Toggle (Live Agent Trace) -->
+<button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-line bg-surface hover:bg-surface-2 text-xs font-mono text-ink-2 transition-colors" id="toggle-right-panel" onclick="toggleRightPanel()" title="Toggle Live Agent Trace (Ctrl+.)">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="activity"></i>
+<span class="hidden sm:inline">Trace</span>
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+</button>
+</div>
+</header>
+<!-- MAIN APP CONTAINER (Sidebar + Workspace + Live Trace Panel) -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- ============================================== -->
+<!-- 1. RESIZABLE SIDEBAR                           -->
+<!-- ============================================== -->
+<aside class="bg-surface border-r border-line flex flex-col shrink-0 relative transition-all duration-150 h-full z-10" id="app-sidebar" style="width: 272px;">
+<!-- Top Sidebar: Wordmark & Actions -->
+<div class="p-3 border-b border-line flex flex-col gap-2.5 shrink-0" id="sidebar-top-section">
+<!-- Wordmark -->
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-ink text-white flex items-center justify-center font-display font-bold text-xs rounded-sm tracking-tighter">M</div>
+<span class="font-display font-bold text-base tracking-tight text-ink">MyTadbir</span>
+</div>
+<span class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded bg-surface-2 border border-line text-muted">v2.4</span>
+</div>
+<!-- Full-width black "New request" button -->
+<button class="w-full flex items-center justify-between px-3 py-2 bg-ink hover:bg-ink-2 text-white rounded text-xs font-medium transition-colors shadow-sm group">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-white" data-lucide="plus"></i>
+<span id="txt-new-request">Permintaan Baharu</span>
+</div>
+<span class="text-[10px] font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">Ctrl N</span>
+</button>
+<!-- Search input field -->
+<div class="relative">
+<i class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" data-lucide="search"></i>
+<input class="w-full pl-8 pr-12 py-1.5 bg-white border border-line rounded text-xs text-ink placeholder:text-muted focus:outline-none focus:border-ink font-sans transition-colors" id="sidebar-search-input" placeholder="Cari kes &amp; perbualan..." type="text"/>
+<span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted bg-surface-2 px-1 py-0.5 rounded border border-line">Ctrl K</span>
+</div>
+</div>
+<!-- Icon-Rail Mode Placeholder (Hidden by default, shown when collapsed to 64px) -->
+<div class="hidden flex-col items-center py-3 gap-3 w-full shrink-0 border-b border-line" id="rail-compact-content">
+<div class="w-7 h-7 bg-ink text-white flex items-center justify-center font-display font-bold text-xs rounded-sm">M</div>
+<button class="w-9 h-9 bg-ink text-white rounded flex items-center justify-center hover:bg-ink-2" title="New Request (Ctrl N)">
+<i class="w-4 h-4" data-lucide="plus"></i>
+</button>
+<button class="w-9 h-9 rounded flex items-center justify-center text-ink-2 hover:bg-surface-2 border border-line" title="Departments Command (D)">
+<i class="w-4 h-4" data-lucide="layout-grid"></i>
+</button>
+</div>
+<!-- Scrollable Navigation Groups -->
+<div class="flex-1 overflow-y-auto px-2 py-3 space-y-4 text-xs" id="sidebar-scrollable-content">
+<!-- GROUP: COMMANDS -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-commands', 'chev-commands')">
+<span id="lbl-commands">Arahan &amp; Templat</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-commands"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-commands">
+<!-- Departments Command Button (opens command palette) -->
+<button class="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors relative border border-transparent hover:border-line" id="open-dept-palette-btn" onclick="toggleDeptPalette(event)">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="building-2"></i>
+<span class="font-medium text-ink" id="txt-departments-nav">Jabatan Kerajaan</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-dept-localgov" title="Target pinned: Local Government"></span>
+<span class="text-[10px] font-mono text-muted">10</span>
+</div>
+</button>
+<!-- Quick templates -->
+<a class="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#templates">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="sparkles"></i>
+<span id="txt-templates">Templat Pantas</span>
+</div>
+</a>
+<!-- Track a case by ID -->
+<a class="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#track-id">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="hash"></i>
+<span id="txt-track-case">Jejak Kes Mengikut ID</span>
+</div>
+</a>
+</div>
+</div>
+<!-- GROUP: MY ACTIVITY -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-activity', 'chev-activity')">
+<span id="lbl-activity">Aktiviti Saya</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-activity"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-activity">
+<!-- My cases -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink group transition-colors font-medium" href="#cases">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="folder"></i>
+<span id="txt-my-cases">Kes Saya</span>
+</div>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-2 border border-line text-[11px] font-mono text-ink">4</span>
+</a>
+<!-- Payments -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#payments">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="credit-card"></i>
+<span id="txt-payments">Bayaran</span>
+</div>
+<span class="text-[10px] font-mono text-status-warning bg-amber-50 px-1 py-0.2 rounded border border-amber-200">1 Tertunggak</span>
+</a>
+<!-- Documents -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#documents">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="file-text"></i>
+<span id="txt-documents">Dokumen</span>
+</div>
+<span class="text-[10px] font-mono text-muted">12</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#calendar">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="calendar"></i>
+<span id="txt-calendar">Kalendar</span>
+</div>
+</a>
+<!-- Notifications -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#notifications">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="bell"></i>
+<span id="txt-notifications">Pemberitahuan</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-status-danger" title="Unread notifications"></span>
+</a>
+</div>
+</div>
+<!-- GROUP: LIVE VIEWS -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-live', 'chev-live')">
+<span id="lbl-live-views">Paparan Langsung</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-live"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-live">
+<!-- Service map -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#service-map">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="map"></i>
+<span id="txt-service-map">Peta Perkhidmatan</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+</a>
+<!-- Impact dashboard -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#impact">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="bar-chart-3"></i>
+<span id="txt-impact-dashboard">Papan Pemuka Impak</span>
+</div>
+</a>
+</div>
+</div>
+<!-- GROUP: GOVERNANCE -->
+<div id="section-governance">
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-governance', 'chev-governance')">
+<div class="flex items-center gap-1.5">
+<span id="lbl-governance">Tadbir Urus</span>
+<span class="text-[9px] px-1 py-0.2 bg-zinc-200 text-ink rounded font-mono" id="badge-officer-only">PEGAWAI</span>
+</div>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-governance"></i>
+</button>
+<div class="mt-1 space-y-0.5" id="grp-governance">
+<!-- Approval queue (Officers only) -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#approvals" id="nav-approval-queue">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="check-square"></i>
+<span id="txt-approval-queue">Giliran Kelulusan</span>
+</div>
+<span class="px-1.5 py-0.2 rounded-full bg-red-100 text-status-danger text-[10px] font-mono font-medium">3</span>
+</a>
+<!-- Policy library (Visible to all) -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#policy">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="book-open"></i>
+<span id="txt-policy-library">Pusat Dasar &amp; Akta</span>
+</div>
+</a>
+<!-- Audit trail (Officers only) -->
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 group transition-colors" href="#audit" id="nav-audit-trail">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-muted group-hover:text-ink" data-lucide="shield-check"></i>
+<span id="txt-audit-trail">Jejak Audit Berantai</span>
+</div>
+<span class="text-[10px] font-mono text-status-success">SHA-256</span>
+</a>
+</div>
+</div>
+<!-- GROUP: CONVERSATIONS (CHAT THREADS) -->
+<div>
+<button class="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider hover:text-ink transition-colors" onclick="toggleGroup('grp-conversations', 'chev-conv')">
+<span id="lbl-conversations">Perbualan</span>
+<i class="w-3.5 h-3.5 text-muted transition-transform duration-200" data-lucide="chevron-down" id="chev-conv"></i>
+</button>
+<div class="mt-1 space-y-3" id="grp-conversations">
+<!-- Pinned Subgroup -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted flex items-center gap-1">
+<i class="w-3 h-3 text-muted" data-lucide="pin"></i>
+<span id="lbl-pinned">Dipin</span>
+</div>
+<div class="mt-0.5 space-y-0.5">
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink transition-colors cursor-pointer bg-white border border-line">
+<div class="overflow-hidden pr-2">
+<div class="font-medium truncate text-xs">Aduan Parit Tersumbat Seksyen 14</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-localgov"></span>
+<span>MT-26-000123</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity" title="Menu perbualan">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- Hari Ini / Today -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted" id="lbl-today">Hari Ini</div>
+<div class="mt-0.5 space-y-0.5">
+<!-- Active thread -->
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-2 border border-line text-ink transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="font-medium truncate text-xs text-ink">Pembaharuan Cukai Jalan JPJ</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-jpj"></span>
+<span>MT-26-000418</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+<!-- Another item -->
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="truncate text-xs">Semakan Saman Trafik PDRM</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-police"></span>
+<span>MT-26-000402</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- Semalam / Yesterday -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted" id="lbl-yesterday">Semalam</div>
+<div class="mt-0.5 space-y-0.5">
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="truncate text-xs">Temujanji Klinik Kesihatan PJ</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-health"></span>
+<span>MT-26-000391</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- 7 Hari Lepas / Previous 7 days -->
+<div>
+<div class="px-2 py-0.5 text-[10px] uppercase font-mono text-muted" id="lbl-prev7days">7 Hari Lepas</div>
+<div class="mt-0.5 space-y-0.5">
+<div class="group relative flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2 transition-colors cursor-pointer">
+<div class="overflow-hidden pr-2">
+<div class="truncate text-xs">Pelepasan Cukai LHDN e-Borang</div>
+<div class="text-[10px] font-mono text-muted flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-dept-lhdn"></span>
+<span>MT-26-000315</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-ink transition-opacity">
+<i class="w-3.5 h-3.5" data-lucide="more-horizontal"></i>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- FOOTER: User profile & MyDigital ID verification pill -->
+<div class="p-2 border-t border-line bg-surface shrink-0 relative" id="sidebar-footer">
+<button class="w-full flex items-center justify-between p-1.5 rounded hover:bg-surface-2 transition-colors group" id="user-menu-btn" onclick="toggleUserMenu(event)">
+<div class="flex items-center gap-2.5 overflow-hidden">
+<!-- Avatar -->
+<div class="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center font-display font-semibold text-xs shrink-0">
+              AH
+            </div>
+<div class="text-left overflow-hidden">
+<div class="font-medium text-xs text-ink truncate flex items-center gap-1">
+<span>Ahmad Harith</span>
+</div>
+<!-- MyDigital ID verified badge -->
+<div class="flex items-center gap-1 text-[10px] font-mono text-status-success">
+<i class="w-3 h-3 text-status-success" data-lucide="check-circle-2"></i>
+<span class="truncate">MyDigital ID Disahkan</span>
+</div>
+</div>
+</div>
+<i class="w-4 h-4 text-muted group-hover:text-ink shrink-0" data-lucide="chevron-up"></i>
+</button>
+<!-- USER CONTEXT POPOVER MENU -->
+<div class="hidden absolute bottom-14 left-2 right-2 bg-white border border-line rounded-lg shadow-floating p-1 text-xs z-50" id="user-popover-menu">
+<div class="px-2.5 py-1.5 border-b border-line text-[11px]">
+<div class="font-medium text-ink">Ahmad Harith bin Razak</div>
+<div class="font-mono text-muted text-[10px]">881204-14-5531</div>
+</div>
+<div class="py-1">
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="user"></i>
+<span id="menu-profile">Profil Peribadi</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="settings"></i>
+<span id="menu-settings">Tetapan Akaun</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="languages"></i>
+<span id="menu-lang">Bahasa / Language</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="sun-moon"></i>
+<span id="menu-theme">Tema (Cerah / Gelap)</span>
+</button>
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-surface-2 text-ink-2">
+<i class="w-3.5 h-3.5 text-muted" data-lucide="help-circle"></i>
+<span id="menu-help">Bantuan &amp; Sokongan</span>
+</button>
+</div>
+<div class="border-t border-line pt-1">
+<button class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-red-50 text-status-danger">
+<i class="w-3.5 h-3.5 text-status-danger" data-lucide="log-out"></i>
+<span id="menu-logout">Log Keluar</span>
+</button>
+</div>
+</div>
+</div>
+<!-- DRAG RESIZE HANDLE -->
+<div class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-zinc-400 active:bg-ink transition-colors z-20" id="sidebar-drag-handle" title="Heret untuk ubah saiz (Dwiklik untuk tetapkan semula 272px)">
+</div>
+</aside>
+<!-- ============================================== -->
+<!-- 2. MAIN CONSOLE / WORKSPACE                    -->
+<!-- ============================================== -->
+<main class="flex-1 flex flex-col bg-white overflow-hidden relative"><div class="flex flex-col w-full">
+<!-- Interactive GIS Canvas Container -->
+<div class="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-surface-container-low select-none flex">
+<!-- ============================================== -->
+<!-- REALISTIC CARTOGRAPHIC VECTOR SVG MAP LAYER   -->
+<!-- ============================================== -->
+<div class="absolute inset-0 z-0 overflow-hidden cursor-grab active:cursor-grabbing" id="map-viewport">
+<svg class="w-full h-full object-cover" preserveaspectratio="xMidYMid slice" viewbox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<!-- Grid Pattern -->
+<pattern height="40" id="urbanGrid" patternunits="userSpaceOnUse" width="40">
+<path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E2E2E2" stroke-width="0.75"></path>
+</pattern>
+<pattern height="80" id="denseBlocks" patternunits="userSpaceOnUse" width="80">
+<rect fill="#F3F3F3" height="76" rx="3" width="76"></rect>
+</pattern>
+<!-- Water Wave Pattern -->
+<lineargradient id="riverGrad" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#C8C6C9" stop-opacity="0.8"></stop>
+<stop offset="100%" stop-color="#C6C5CF" stop-opacity="0.9"></stop>
+</lineargradient>
+<!-- Animated Flood Ripple -->
+<radialgradient id="floodAmberRadial">
+<stop offset="0%" stop-color="#B45309" stop-opacity="0.45"></stop>
+<stop offset="60%" stop-color="#CA8A04" stop-opacity="0.25"></stop>
+<stop offset="100%" stop-color="#CA8A04" stop-opacity="0"></stop>
+</radialgradient>
+</defs>
+<!-- Base Background / Urban Parcels -->
+<rect fill="#F9F9F9" height="100%" width="100%"></rect>
+<rect fill="url(#urbanGrid)" height="100%" width="100%"></rect>
+<!-- Green Reserve Areas (Taman Rimba Kiara, Bukit Gasing, Taman Jaya Lake Park) -->
+<path d="M 680,260 C 720,240 790,250 820,290 C 850,330 830,380 780,410 C 730,440 670,410 650,350 Z" fill="#E4E1E5" opacity="0.6"></path>
+<text class="font-label-sm text-[11px] fill-secondary" letter-spacing="0.08em" x="710" y="340">TAMAN JAYA RECREATION PARK</text>
+<path d="M 1120,680 C 1190,640 1280,670 1340,730 C 1400,790 1370,880 1300,920 C 1220,950 1140,890 1110,810 Z" fill="#E4E1E5" opacity="0.5"></path>
+<text class="font-label-sm text-[11px] fill-secondary" letter-spacing="0.08em" x="1190" y="800">HUTAN PENDIDIKAN BUKIT GASING</text>
+<!-- Lake: Taman Jaya Lake -->
+<path d="M 720,310 C 750,300 780,315 775,340 C 770,365 735,375 715,360 C 695,345 700,320 720,310 Z" fill="#C8C6C9"></path>
+<!-- Urban Secondary Blocks -->
+<rect fill="#EEEEEE" height="120" rx="4" width="180" x="220" y="160"></rect>
+<text class="font-label-sm text-[10px] fill-outline uppercase" x="240" y="190">Seksyen SS2 · Hub Komersial</text>
+<rect fill="#E8E8E8" height="160" rx="4" width="220" x="440" y="440"></rect>
+<text class="font-label-sm text-[10px] fill-outline uppercase" x="460" y="470">Seksyen 14 · Petaling Jaya</text>
+<rect fill="#EEEEEE" height="140" rx="4" width="200" x="880" y="180"></rect>
+<text class="font-label-sm text-[10px] fill-outline uppercase" x="900" y="210">Seksyen 13 · Zon Perindustrian</text>
+<rect fill="#EEEEEE" height="150" rx="4" width="210" x="860" y="520"></rect>
+<text class="font-label-sm text-[10px] fill-outline uppercase" x="880" y="550">Seksyen 52 · Pusat Bandar PJ Baru</text>
+<rect fill="#EEEEEE" height="180" rx="4" width="240" x="520" y="720"></rect>
+<text class="font-label-sm text-[10px] fill-outline uppercase" x="540" y="750">PJ Old Town · Seksyen 1 &amp; 2</text>
+<!-- Rivers: Sungai Damansara & Sungai Penchala -->
+<path d="M -20,280 C 180,310 290,260 410,340 C 530,420 590,460 740,510 C 890,560 1020,530 1140,580 C 1300,640 1440,610 1620,680" fill="none" stroke="#C6C5CF" stroke-linecap="round" stroke-width="14"></path>
+<path d="M -20,280 C 180,310 290,260 410,340 C 530,420 590,460 740,510 C 890,560 1020,530 1140,580 C 1300,640 1440,610 1620,680" fill="none" opacity="0.4" stroke="#FFFFFF" stroke-dasharray="8 8" stroke-width="3"></path>
+<text class="font-data-mono-sm text-[10px] fill-secondary-fixed-dim" letter-spacing="0.1em" x="430" y="325">SUNGAI DAMANSARA (LALUAN UTAMA)</text>
+<path d="M 820,-20 C 840,110 830,220 890,340 C 950,460 1010,540 1060,780 C 1090,880 1130,940 1180,1020" fill="none" stroke="#C8C6C9" stroke-linecap="round" stroke-width="8"></path>
+<text class="font-data-mono-sm text-[10px] fill-secondary-fixed-dim" transform="rotate(65 895 390)" x="895" y="390">SUNGAI PENCHALA</text>
+<!-- Expressways & Major Roads (Federal Highway / Lebuhraya Persekutuan Route 2) -->
+<path d="M -50,560 C 220,560 460,540 680,550 C 940,560 1200,530 1650,520" fill="none" stroke="#1A1C1C" stroke-linecap="square" stroke-width="9"></path>
+<path d="M -50,560 C 220,560 460,540 680,550 C 940,560 1200,530 1650,520" fill="none" stroke="#FFFFFF" stroke-dasharray="14 10" stroke-width="1.5"></path>
+<text class="font-headline-sm text-[12px] fill-primary font-bold tracking-wider" x="1220" y="512">LEBUHRAYA PERSEKUTUAN (FEDERAL HWY FT2)</text>
+<!-- Secondary Arteries: Jalan Universiti (Jalan Prof Diraja Ungku Aziz) -->
+<path d="M 740,-30 L 710,550" fill="none" stroke="#78767B" stroke-width="5"></path>
+<text class="font-label-sm text-[10px] fill-on-surface-variant" transform="rotate(88 718 240)" x="718" y="240">JALAN UNIVERSITI (UNGKU AZIZ)</text>
+<!-- Jalan Gasing -->
+<path d="M 760,550 C 820,680 940,820 1020,1020" fill="none" stroke="#78767B" stroke-width="4.5"></path>
+<text class="font-label-sm text-[10px] fill-on-surface-variant" transform="rotate(45 830 680)" x="830" y="680">JALAN GASING</text>
+<!-- Jalan Kemajuan & Jalan Barat -->
+<path d="M 440,280 L 1020,440" fill="none" stroke="#C8C5CA" stroke-width="3"></path>
+<path d="M 320,440 L 710,440" fill="none" stroke="#C8C5CA" stroke-width="3"></path>
+<text class="font-caption text-[9px] fill-outline" x="350" y="432">JALAN 14/14</text>
+<path d="M 520,380 L 520,620" fill="none" stroke="#C8C5CA" stroke-width="3"></path>
+<text class="font-caption text-[9px] fill-outline" transform="rotate(90 525 490)" x="525" y="490">JALAN 14/20</text>
+<!-- Municipal Boundary Line (MBPJ Zon 7 Petaling Jaya) -->
+<path d="M 120,60 L 1380,60 L 1480,940 L 80,940 Z" fill="none" opacity="0.35" stroke="#1A1C1C" stroke-dasharray="6 6" stroke-width="1.5"></path>
+<text class="font-data-mono-sm text-[11px] fill-secondary font-semibold" letter-spacing="0.1em" x="140" y="90">SEMPADAN OPERASI MBPJ · ZON 7 (SEKSYEN 14, 13, 20, 21, 22)</text>
+<!-- ============================================== -->
+<!-- GIS HAZARD & FLOOD WATCH POLYGONS (AMBER/RED)  -->
+<!-- ============================================== -->
+<!-- Flood Inundation Risk Polygon over Sg Damansara / Seksyen 13 Basin -->
+<g class="transition-opacity duration-300">
+<polygon fill="url(#floodAmberRadial)" points="480,480 620,430 760,490 690,560 520,540" stroke="#B45309" stroke-dasharray="4 4" stroke-width="1.5"></polygon>
+<circle cx="580" cy="495" fill="#B45309" opacity="0.12" r="48">
+<animate attributename="r" dur="3s" repeatcount="indefinite" values="32;58;32"></animate>
+<animate attributename="opacity" dur="3s" repeatcount="indefinite" values="0.25;0.05;0.25"></animate>
+</circle>
+<text class="font-label-sm text-[10px] fill-error font-bold" letter-spacing="0.05em" x="545" y="525">ZON RISIKO BANJIR KILAT (AMARAN)</text>
+</g>
+<!-- ============================================== -->
+<!-- CONTRACTOR CREW EN ROUTE ROUTE POLYLINE        -->
+<!-- ============================================== -->
+<!-- Trajectory from Jalan Universiti into Jalan 14/20 -->
+<g id="contractor-route">
+<path d="M 725,120 L 720,380 L 520,380 L 520,490" fill="none" stroke="#000000" stroke-dasharray="6 6" stroke-width="3">
+<animate attributename="stroke-dashoffset" dur="1.2s" repeatcount="indefinite" values="24;0"></animate>
+</path>
+<!-- Contractor Vehicle Position Icon -->
+<g transform="translate(620, 370)">
+<circle cx="10" cy="10" fill="#000000" r="14"></circle>
+<path d="M 6 6 L 14 6 L 14 14 L 6 14 Z" fill="#FFFFFF" opacity="0.3"></path>
+<path d="M 5 8 L 15 8 L 13 13 L 7 13 Z" fill="#FFFFFF"></path>
+</g>
+</g>
+<!-- ============================================== -->
+<!-- RIVER TELEMETRY SENSORS (JPS / INFOBANJIR)     -->
+<!-- ============================================== -->
+<!-- Sensor 1: TTDI / Damansara (Alert / Amaran) -->
+<g class="cursor-pointer group" transform="translate(380, 320)">
+<circle cx="0" cy="0" fill="#FFFFFF" r="10" stroke="#1A1C1C" stroke-width="2"></circle>
+<circle cx="0" cy="0" fill="#B45309" r="5"></circle>
+<circle cx="0" cy="0" fill="none" opacity="0.6" r="18" stroke="#B45309" stroke-width="1.5">
+<animate attributename="r" dur="2s" repeatcount="indefinite" values="10;22;10"></animate>
+<animate attributename="opacity" dur="2s" repeatcount="indefinite" values="0.8;0;0.8"></animate>
+</circle>
+<!-- Tooltip label -->
+<rect fill="#1A1C1C" height="34" rx="4" width="168" x="14" y="-18"></rect>
+<text class="font-data-mono-sm text-[11px] fill-on-primary font-bold" x="22" y="-4">Stesen Sg. Damansara TTDI</text>
+<text class="font-data-mono-sm text-[10px] fill-secondary-fixed" x="22" y="10">8.42m · STATUS AMARAN</text>
+</g>
+<!-- Sensor 2: Sg. Penchala (Normal) -->
+<g class="cursor-pointer group" transform="translate(930, 420)">
+<circle cx="0" cy="0" fill="#FFFFFF" r="8" stroke="#1A1C1C" stroke-width="1.5"></circle>
+<circle cx="0" cy="0" fill="#5F5E61" r="4"></circle>
+<rect fill="#FFFFFF" height="30" rx="4" stroke="#C8C5CA" stroke-width="1" width="145" x="12" y="-16"></rect>
+<text class="font-data-mono-sm text-[10px] fill-primary font-semibold" x="18" y="-3">Stesen Sg. Penchala</text>
+<text class="font-data-mono-sm text-[9px] fill-outline" x="18" y="9">3.12m · Paras Normal</text>
+</g>
+<!-- ============================================== -->
+<!-- PUBLIC FACILITIES MARKERS (HOSPITAL / PPS)     -->
+<!-- ============================================== -->
+<!-- PPS Dewan Sivik MBPJ -->
+<g class="cursor-pointer" transform="translate(920, 580)">
+<rect fill="#1C1B1D" height="28" rx="4" stroke="#FFFFFF" stroke-width="2" width="28" x="-14" y="-14"></rect>
+<text class="font-headline-sm text-[11px] fill-on-primary font-bold" text-anchor="middle" x="0" y="4">PPS</text>
+<rect fill="#FFFFFF" height="22" rx="3" stroke="#E2E2E2" stroke-width="1" width="130" x="-65" y="18"></rect>
+<text class="font-label-sm text-[10px] fill-primary font-medium" text-anchor="middle" x="0" y="33">Dewan Sivik MBPJ (Kapasiti: 450)</text>
+</g>
+<!-- Klinik Kesihatan Kelana Jaya -->
+<g class="cursor-pointer" transform="translate(260, 460)">
+<rect fill="#FFFFFF" height="24" rx="4" stroke="#1A1C1C" stroke-width="2" width="24" x="-12" y="-12"></rect>
+<text class="font-headline-sm text-[14px] fill-primary font-bold" text-anchor="middle" x="0" y="4">+</text>
+<rect fill="#FFFFFF" height="20" rx="3" stroke="#E2E2E2" stroke-width="1" width="110" x="-55" y="16"></rect>
+<text class="font-caption text-[10px] fill-on-surface" text-anchor="middle" x="0" y="30">Klinik Kesihatan KJ</text>
+</g>
+<!-- SK Petaling Jaya -->
+<g class="cursor-pointer" transform="translate(480, 680)">
+<circle cx="0" cy="0" fill="#FFFFFF" r="10" stroke="#78767B" stroke-width="1.5"></circle>
+<text class="font-caption text-[10px] fill-primary font-bold" text-anchor="middle" x="0" y="3.5">SK</text>
+<rect fill="#FFFFFF" height="18" rx="3" stroke="#E2E2E2" stroke-width="1" width="100" x="-50" y="14"></rect>
+<text class="font-caption text-[9px] fill-secondary" text-anchor="middle" x="0" y="26">SK Petaling Jaya</text>
+</g>
+<!-- ============================================== -->
+<!-- INCIDENT MARKERS                               -->
+<!-- ============================================== -->
+<!-- Incident 2: JBPM Bomba SS2 Gas Leak -->
+<g class="cursor-pointer" transform="translate(320, 220)">
+<circle cx="0" cy="0" fill="#BA1A1A" r="12" stroke="#FFFFFF" stroke-width="2"></circle>
+<circle cx="0" cy="0" fill="none" r="20" stroke="#BA1A1A" stroke-dasharray="3 3" stroke-width="1"></circle>
+<text class="font-label-sm text-[10px] fill-on-error font-bold" text-anchor="middle" x="0" y="4">JBPM</text>
+<rect fill="#FFFFFF" height="30" rx="4" stroke="#BA1A1A" stroke-width="1" width="150" x="18" y="-14"></rect>
+<text class="font-label-sm text-[10px] fill-primary font-bold" x="24" y="-1">JBPM: Kebocoran Gas SS2</text>
+<text class="font-data-mono-sm text-[9px] fill-secondary" x="24" y="11">MT-26-000492 · Balai Damansara</text>
+</g>
+<!-- Incident 3: Pokok Tumbang Jalan Gasing -->
+<g class="cursor-pointer" transform="translate(860, 710)">
+<circle cx="0" cy="0" fill="#1A1C1C" r="11" stroke="#FFFFFF" stroke-width="2"></circle>
+<text class="font-headline-sm text-[10px] fill-on-primary font-bold" text-anchor="middle" x="0" y="3.5">!</text>
+<rect fill="#FFFFFF" height="26" rx="3" stroke="#E2E2E2" stroke-width="1" width="140" x="16" y="-12"></rect>
+<text class="font-label-sm text-[10px] fill-primary font-medium" x="22" y="1">Pokok Tumbang Laluan Bus</text>
+<text class="font-data-mono-sm text-[9px] fill-outline" x="22" y="11">MT-26-000552 · Sedang Dipotong</text>
+</g>
+<!-- ============================================== -->
+<!-- SELECTED PRIMARY INCIDENT: MT-26-000123 (PIN)  -->
+<!-- ============================================== -->
+<g class="cursor-pointer" id="primary-selected-marker" transform="translate(520, 490)">
+<!-- Pulsing Radar Target -->
+<circle cx="0" cy="0" fill="none" opacity="0.6" r="32" stroke="#000000" stroke-dasharray="4 4" stroke-width="1.5">
+<animate attributename="r" dur="2.4s" repeatcount="indefinite" values="18;38;18"></animate>
+<animate attributename="opacity" dur="2.4s" repeatcount="indefinite" values="0.8;0.1;0.8"></animate>
+</circle>
+<!-- Pin Beacon Shadow -->
+<ellipse cx="0" cy="4" fill="#000000" opacity="0.25" rx="14" ry="5"></ellipse>
+<!-- Pin Body -->
+<path d="M 0,-34 C -14,-34 -20,-22 -20,-12 C -20,6 0,20 0,20 C 0,20 20,6 20,-12 C 20,-22 14,-34 0,-34 Z" fill="#000000" stroke="#FFFFFF" stroke-width="2"></path>
+<circle cx="0" cy="-15" fill="#FFFFFF" r="6"></circle>
+<circle cx="0" cy="-15" fill="#000000" r="3"></circle>
+<!-- Floating Pin Identity Flag -->
+<g transform="translate(24, -40)">
+<rect fill="#000000" height="42" rx="4" width="180" x="0" y="0"></rect>
+<text class="font-data-mono-sm text-[11px] fill-on-primary font-bold" x="10" y="16">MT-26-000123</text>
+<text class="font-label-sm text-[10px] fill-secondary-fixed" x="10" y="32">Aduan Parit Tersumbat Seksyen 14</text>
+<!-- Severity indicator dot -->
+<circle cx="166" cy="14" fill="#B45309" r="4"></circle>
+</g>
+</g>
+</svg>
+</div>
+<!-- ============================================== -->
+<!-- TOP FLOATING HUD & STATUS BAR                  -->
+<!-- ============================================== -->
+<div class="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+<!-- Left: Location & Active Sector Pill -->
+<div class="pointer-events-auto flex items-center gap-2 bg-surface-container-lowest border-0 rounded-xl px-3.5 py-2 shadow-floating">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface">Petaling Jaya</span>
+<span class="text-outline-variant font-data-mono-sm text-data-mono-sm">/</span>
+<span class="font-data-mono-sm text-data-mono-sm text-secondary">MBPJ Zon 7 (Seksyen 14)</span>
+</div>
+<span class="ml-2 font-data-mono-sm text-[11px] bg-surface-container px-2 py-0.5 rounded text-on-surface-variant">3.1124° N, 101.6318° E</span>
+</div>
+<!-- Center: Fast Layer Filter HUD Segment -->
+<div class="pointer-events-auto hidden md:flex items-center bg-surface-container-lowest p-1 rounded-xl shadow-floating gap-1">
+<button class="px-3 py-1.5 rounded-lg font-label-sm text-label-sm bg-primary text-on-primary flex items-center gap-1.5 transition-all">
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary"></span>
+<span>Kes Aktif (14)</span>
+</button>
+<button class="px-3 py-1.5 rounded-lg font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>Stesen Sg (4)</span>
+</button>
+<button class="px-3 py-1.5 rounded-lg font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>Kru En Route (3)</span>
+</button>
+<div class="h-4 w-px bg-outline-variant mx-1"></div>
+<button class="px-2.5 py-1.5 rounded-lg font-label-sm text-[11px] text-secondary hover:text-primary hover:bg-surface-container flex items-center gap-1">
+<span>Peta Haba</span>
+<span class="text-[9px] font-data-mono-sm px-1 rounded bg-surface-container-highest text-secondary">OFF</span>
+</button>
+<button class="px-2.5 py-1.5 rounded-lg font-label-sm text-[11px] text-primary bg-surface-container-low flex items-center gap-1">
+<span>Trafik Langsung</span>
+<span class="text-[9px] font-data-mono-sm px-1 rounded bg-primary text-on-primary">ON</span>
+</button>
+</div>
+<!-- Right: Live Vehicle ETA Pill -->
+<div class="pointer-events-auto flex items-center gap-2.5 bg-primary text-on-primary px-3.5 py-2 rounded-xl shadow-floating-lg animate-in fade-in duration-200">
+<span class="material-symbols-outlined text-body-lg text-secondary-fixed">local_shipping</span>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm leading-tight text-on-primary">KDEB Trak WX-4102</span>
+<span class="font-data-mono-sm text-[11px] text-secondary-fixed-dim">ETA 14 minit · Jln Universiti</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-secondary-fixed animate-ping"></span>
+</div>
+</div>
+<!-- ============================================== -->
+<!-- LEFT FLOATING DRAWER: DATA LAYERS & FILTERS    -->
+<!-- ============================================== -->
+<div class="absolute top-20 left-4 z-20 w-80 md:w-96 max-h-[calc(100vh-9.5rem)] flex flex-col bg-surface-container-lowest rounded-xl shadow-floating-lg border-0 overflow-hidden transition-all duration-300" id="left-layers-panel">
+<!-- Panel Header -->
+<div class="p-3.5 bg-surface-container-low flex items-center justify-between shrink-0">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-body-lg text-primary">layers</span>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Lapisan Data &amp; Penapis GIS</h2>
+<p class="font-caption text-caption text-secondary">Sistem Pemantauan Geospatial Bersepadu</p>
+</div>
+</div>
+<span class="font-data-mono-sm text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface-variant font-medium">LIVE 2s</span>
+</div>
+<!-- Search Place Bar -->
+<div class="p-3 bg-surface-container-lowest shrink-0">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-2.5 text-body-sm text-outline">search</span>
+<input class="w-full pl-8 pr-3 py-1.5 bg-surface-container rounded-lg font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all" placeholder="Cari tempat, jalan atau poskod (cth: 46100)..." type="text" value="Seksyen 14, Petaling Jaya"/>
+</div>
+</div>
+<!-- Scrollable Layer Controls -->
+<div class="flex-1 overflow-y-auto p-3.5 space-y-4 font-body-sm">
+<!-- Radius Proximity Slider -->
+<div class="p-3 rounded-lg bg-surface-container-low space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-body-sm text-secondary">radar</span>
+<span>Berdekatan Saya (Radius)</span>
+</span>
+<span class="font-data-mono-sm text-data-mono-sm font-semibold text-primary" id="radius-val">3.5 km</span>
+</div>
+<input class="w-full accent-primary h-1.5 bg-surface-container-highest rounded-lg cursor-pointer" max="10" min="0.5" oninput="document.getElementById('radius-val').textContent = this.value + ' km'" step="0.5" type="range" value="3.5"/>
+<div class="flex justify-between font-caption text-[10px] text-outline">
+<span>500 m (Zon Rumah)</span>
+<span>Seksyen 14 Pusat</span>
+<span>10 km (Daerah PJ)</span>
+</div>
+</div>
+<!-- LAYER 1: LAPORAN KES KOMUNITI -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="flex items-center gap-2">
+<input checked="" class="w-4 h-4 rounded bg-surface-container-lowest text-primary accent-primary cursor-pointer" type="checkbox"/>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Kes Dilaporkan Awam</span>
+</div>
+<span class="font-data-mono-sm text-[11px] font-bold bg-primary text-on-primary px-2 py-0.5 rounded-full">14 Kes</span>
+</div>
+<!-- Sub-breakdown toggles -->
+<div class="pl-6 pr-2 py-1 space-y-1 text-caption text-secondary">
+<div class="flex items-center justify-between hover:text-primary cursor-pointer">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+<span>Dibuka (Menunggu Pengesahan)</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm text-on-surface">5</span>
+</div>
+<div class="flex items-center justify-between hover:text-primary cursor-pointer">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span>Ditugaskan &amp; En Route</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm font-bold text-primary">4</span>
+</div>
+<div class="flex items-center justify-between hover:text-primary cursor-pointer">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed-dim"></span>
+<span>Selesai &amp; Disahkan Pengadu</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm text-secondary">5</span>
+</div>
+</div>
+</div>
+<!-- LAYER 2: TELEMETRI SUNGAI & AMARAN BANJIR (JPS) -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="flex items-center gap-2">
+<input checked="" class="w-4 h-4 rounded bg-surface-container-lowest text-primary accent-primary cursor-pointer" type="checkbox"/>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Amaran Paras Sungai (JPS)</span>
+</div>
+<span class="font-data-mono-sm text-[11px] font-semibold bg-surface-container-highest text-on-surface px-2 py-0.5 rounded-full">4 Stesen</span>
+</div>
+<div class="pl-6 pr-2 py-1 space-y-1.5 text-caption">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-on-surface font-medium">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span>Normal (&lt; 5.0m)</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm text-secondary">2 stesen</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-on-surface font-medium">
+<span class="w-2 h-2 rounded-full bg-secondary-container"></span>
+<span>Waspada (5.0m - 7.5m)</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm text-secondary">1 stesen</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-primary font-bold">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span>Amaran (Sg. Damansara 8.42m)</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm text-primary font-bold">1 aktif</span>
+</div>
+</div>
+</div>
+<!-- LAYER 3: INSIDEN BOMBA (JBPM) -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="flex items-center gap-2">
+<input checked="" class="w-4 h-4 rounded bg-surface-container-lowest text-primary accent-primary cursor-pointer" type="checkbox"/>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Bomba &amp; Penyelamat (JBPM)</span>
+</div>
+<span class="font-data-mono-sm text-[11px] font-bold bg-surface-container-highest text-on-surface px-2 py-0.5 rounded-full">2 Panggilan</span>
+</div>
+<!-- LAYER 4: KEMUDAHAN AWAM & PUSAT PEMINDAHAN (PPS) -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="flex items-center gap-2">
+<input checked="" class="w-4 h-4 rounded bg-surface-container-lowest text-primary accent-primary cursor-pointer" type="checkbox"/>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Kemudahan Awam &amp; PPS</span>
+</div>
+<span class="font-data-mono-sm text-[11px] font-medium bg-surface-container-highest text-on-surface px-2 py-0.5 rounded-full">18 Lokasi</span>
+</div>
+<div class="pl-6 pr-2 py-0.5 flex flex-wrap gap-1.5 text-caption">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label-sm text-[11px]">Sekolah (8)</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label-sm text-[11px]">Klinik KKM (4)</span>
+<span class="px-2 py-0.5 rounded bg-primary text-on-primary font-label-sm text-[11px]">PPS Aktif (6)</span>
+</div>
+</div>
+<!-- Quick Agency Filter Tags -->
+<div class="pt-2 border-0 space-y-1.5">
+<span class="font-label-sm text-[11px] text-outline uppercase tracking-wider">Tapis Mengikut Agensi Terlibat</span>
+<div class="flex flex-wrap gap-1.5">
+<button class="px-2.5 py-1 rounded-md font-label-sm text-[11px] bg-primary text-on-primary">MBPJ</button>
+<button class="px-2.5 py-1 rounded-md font-label-sm text-[11px] bg-surface-container text-on-surface hover:bg-surface-container-high">JPS</button>
+<button class="px-2.5 py-1 rounded-md font-label-sm text-[11px] bg-surface-container text-on-surface hover:bg-surface-container-high">JBPM</button>
+<button class="px-2.5 py-1 rounded-md font-label-sm text-[11px] bg-surface-container text-on-surface hover:bg-surface-container-high">KKM</button>
+<button class="px-2.5 py-1 rounded-md font-label-sm text-[11px] bg-surface-container text-on-surface hover:bg-surface-container-high">PDRM</button>
+</div>
+</div>
+</div>
+<!-- Panel Footer Action -->
+<div class="p-3 bg-surface-container-low flex items-center justify-between shrink-0 font-label-sm text-label-sm">
+<button class="text-secondary hover:text-primary transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-body-sm">restart_alt</span>
+<span>Set Semula</span>
+</button>
+<button class="px-3 py-1.5 bg-primary text-on-primary rounded-lg hover:bg-surface-tint transition-all">
+          Guna 4 Penapis
+        </button>
+</div>
+</div>
+<!-- ============================================== -->
+<!-- RIGHT FLOATING CARD: ACTIVE MARKER INSPECTOR   -->
+<!-- Case MT-26-000123 (Selected State)             -->
+<!-- ============================================== -->
+<div class="absolute top-20 right-4 z-20 w-80 md:w-[410px] max-h-[calc(100vh-9.5rem)] flex flex-col bg-surface-container-lowest rounded-xl shadow-floating-lg border-0 overflow-hidden animate-in slide-in-from-right-4 duration-200" id="marker-inspector-card">
+<!-- Top Inspector Bar with Case ID -->
+<div class="p-3.5 bg-primary text-on-primary flex items-center justify-between shrink-0">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary-fixed"></span>
+<span class="font-data-mono-sm text-data-mono-sm font-bold tracking-tight text-on-primary">KES: MT-26-000123</span>
+<button class="text-secondary-fixed-dim hover:text-on-primary p-0.5 transition-colors" onclick="navigator.clipboard.writeText('MT-26-000123')" title="Salin No Rujukan Kes">
+<span class="material-symbols-outlined text-body-sm">content_copy</span>
+</button>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-data-mono-sm bg-surface-container-highest text-primary font-bold">MBPJ ZON 7</span>
+<button class="text-secondary-fixed-dim hover:text-on-primary p-1 rounded transition-colors" onclick="document.getElementById('marker-inspector-card').classList.toggle('hidden')">
+<span class="material-symbols-outlined text-body-default">close</span>
+</button>
+</div>
+</div>
+<!-- Field Photo Thumbnail & Metadata -->
+<div class="p-3.5 space-y-3.5 overflow-y-auto flex-1 font-body-sm">
+<!-- Photo Evidence Placeholder with detailed visual prompt -->
+<div class="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-high group">
+<img class="w-full h-full object-cover grayscale contrast-125" data-alt="High quality realistic documentary photograph taken in Petaling Jaya Malaysia showing a major concrete monsoon drain overflowing with accumulated urban storm debris, fallen branches, plastic waste, and silt after heavy tropical monsoon rain. Daylight, overcast humid sky, municipal road kerb visible." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAviGoUKjVGXLHeB05XNZf1JUEFDBNS-W1O8uOlNvaGb_OiiDC8N_do8oQz6hhf55GNbqI8uRnnpiaENp51LDUKcs-1GXLCIsoO741cHxAA0U2EVXkKN-6KPM4y9cYycibxgiJuygYG1lXX26S1vIoBtKG86GoQVKyq2Q3vhkQGtOwJ1HWuKallcKlBqGv5PrVQCihryE9H1f3CoH9Bgj2p7Il3Qg-wGrozfc-7B2mO"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent flex items-end p-2.5">
+<div class="flex items-center justify-between w-full text-on-primary font-caption text-[11px]">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-body-sm text-secondary-fixed">photo_camera</span>
+<span>Foto Aduan Pengadu (Ahmad Harith)</span>
+</span>
+<span class="font-data-mono-sm">10:38 AM</span>
+</div>
+</div>
+</div>
+<!-- Incident Title & High-Risk Pill -->
+<div class="space-y-1.5">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded font-label-sm text-[11px] bg-secondary-fixed text-on-secondary-fixed font-bold">Risiko Tinggi / Amaran Banjir</span>
+<span class="font-caption text-caption text-secondary">Aduan Awam Sah</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Aduan Parit Tersumbat &amp; Banjir Kilat Seksyen 14</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Limpahan air parit monsun utama di persimpangan Jalan 14/20 menghala ke Jalan 14/14. Halangan sisa pokok dan kelodak menyekat 70% aliran air menuju kolam tadahan Seksyen 14.
+          </p>
+</div>
+<!-- Real-Time Contractor ETA Callout Banner -->
+<div class="p-3 rounded-lg bg-surface-container space-y-1.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-body-default text-primary">navigation</span>
+<span class="font-label-sm text-label-sm text-on-surface font-bold">Kru Penyelenggaraan KDEB</span>
+</div>
+<span class="font-data-mono-sm text-data-mono-sm font-bold text-primary">ETA 14 MINIT</span>
+</div>
+<div class="flex items-center justify-between font-caption text-[11px] text-secondary">
+<span>Trak Sisa: WX-4102</span>
+<span>Jangka Tiba: 11:45 AM</span>
+</div>
+<!-- Progress bar -->
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full" style="width: 72%"></div>
+</div>
+<div class="font-caption text-[10px] text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-caption">info</span>
+<span>Kini di persimpangan Jalan Universiti / Jalan Kemajuan (Kelajuan: 38 km/j)</span>
+</div>
+</div>
+<!-- Assigned Officers & Personnel Grid -->
+<div class="grid grid-cols-2 gap-2 text-caption">
+<div class="p-2.5 rounded-lg bg-surface-container-low">
+<span class="text-outline uppercase text-[10px] font-label-sm block">Ketua Pasukan Tapak</span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold block">En. Roslan Hamzah</span>
+<span class="text-secondary text-[11px]">KDEB Waste Zone 7</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low">
+<span class="text-outline uppercase text-[10px] font-label-sm block">Pegawai Pengesah MBPJ</span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold block">Ir. Mohd Zamri</span>
+<span class="text-secondary text-[11px]">Jabatan Kejuruteraan</span>
+</div>
+</div>
+<!-- Vertical Workflow Stepper -->
+<div class="pt-2 border-0 space-y-2">
+<span class="font-label-sm text-[11px] text-outline uppercase tracking-wider block">Kronologi Tindakan Agensi</span>
+<div class="space-y-2.5 pl-2 font-caption text-[12px]">
+<!-- Step 1 Done -->
+<div class="flex items-start gap-2.5">
+<span class="w-2 h-2 rounded-full bg-primary mt-1 shrink-0"></span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-medium text-on-surface">Aduan Diterima &amp; Disahkan MyDigital ID</span>
+<span class="font-data-mono-sm text-[10px] text-outline">10:38 AM</span>
+</div>
+<span class="text-secondary text-[11px]">Laporan didaftarkan pengguna Ahmad Harith.</span>
+</div>
+</div>
+<!-- Step 2 Done -->
+<div class="flex items-start gap-2.5">
+<span class="w-2 h-2 rounded-full bg-primary mt-1 shrink-0"></span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-medium text-on-surface">Penilaian AI &amp; Agihan Segera MBPJ</span>
+<span class="font-data-mono-sm text-[10px] text-outline">10:40 AM</span>
+</div>
+<span class="text-secondary text-[11px]">Klasifikasi automatik: Kod A3 (Saliran Monsun Tersumbat).</span>
+</div>
+</div>
+<!-- Step 3 Active -->
+<div class="flex items-start gap-2.5">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping mt-1 shrink-0"></span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-bold text-primary">Kru KDEB Dikerahkan (En Route)</span>
+<span class="font-data-mono-sm text-[10px] text-primary font-bold">11:25 AM</span>
+</div>
+<span class="text-on-surface-variant text-[11px]">Trak sisa berat WX-4102 bergerak dari Depot PJ Old Town.</span>
+</div>
+</div>
+<!-- Step 4 Pending -->
+<div class="flex items-start gap-2.5 opacity-40">
+<span class="w-2 h-2 rounded-full bg-outline-variant mt-1 shrink-0"></span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-medium text-outline">Pembersihan Sisa &amp; Pengesahan Foto</span>
+<span class="font-data-mono-sm text-[10px]">Menunggu</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Buttons Footer -->
+<div class="p-3.5 bg-surface-container-low flex items-center gap-2 shrink-0">
+<a class="flex-1 py-2 px-3 bg-primary hover:bg-surface-tint text-on-primary font-label-sm text-label-sm text-center rounded-lg transition-all flex items-center justify-center gap-1.5" href="#case-console-full">
+<span>Buka Kes Penuh</span>
+<span class="material-symbols-outlined text-body-sm">arrow_outward</span>
+</a>
+<button class="py-2 px-3 bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-sm text-label-sm rounded-lg transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-body-sm text-secondary">call</span>
+<span>Hubungi Pasukan</span>
+</button>
+</div>
+</div>
+<!-- ============================================== -->
+<!-- MAP UTILITIES CONTROLS (BOTTOM-RIGHT)          -->
+<!-- ============================================== -->
+<div class="absolute bottom-6 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
+<!-- Layer Switcher Floating Button -->
+<div class="bg-surface-container-lowest rounded-xl shadow-floating p-1 flex flex-col gap-1">
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-primary transition-colors" title="Peta Standard (Monochrome)">
+<span class="material-symbols-outlined text-body-default">map</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-secondary transition-colors" title="Lapisan Satelit Kerajaan">
+<span class="material-symbols-outlined text-body-default">satellite_alt</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-secondary transition-colors" title="Kontur / Topografi">
+<span class="material-symbols-outlined text-body-default">terrain</span>
+</button>
+</div>
+<!-- Zoom & Locate Group -->
+<div class="bg-surface-container-lowest rounded-xl shadow-floating p-1 flex flex-col gap-1">
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-primary font-headline-md transition-colors" onclick="zoomInMap()" title="Zum Masuk (+)">
+          +
+        </button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-primary font-headline-md transition-colors" onclick="zoomOutMap()" title="Zum Keluar (-)">
+          -
+        </button>
+<div class="h-px bg-outline-variant mx-1"></div>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-primary transition-colors" title="Pusatkan ke Lokasi Saya (Seksyen 14)">
+<span class="material-symbols-outlined text-body-default">my_location</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-primary transition-colors" title="Orientasi Utara (Reset Kompas)">
+<span class="material-symbols-outlined text-body-default">explore</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-primary transition-colors" title="Skrin Penuh GIS">
+<span class="material-symbols-outlined text-body-default">fullscreen</span>
+</button>
+</div>
+</div>
+<!-- ============================================== -->
+<!-- BOTTOM-LEFT FLOATING LEGEND & TELEMETRY BAR    -->
+<!-- ============================================== -->
+<div class="absolute bottom-6 left-4 z-20 flex flex-wrap items-center gap-3 pointer-events-auto">
+<!-- Semantic GIS Legend Pill -->
+<div class="bg-surface-container-lowest rounded-xl px-4 py-2.5 shadow-floating flex items-center gap-4 text-caption text-secondary">
+<span class="font-label-sm text-label-sm text-on-surface font-bold">Petunjuk Peta:</span>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
+<span class="font-label-sm text-[11px] text-on-surface">Kes MBPJ (14)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+<span class="font-label-sm text-[11px] text-on-surface">Paras Air Sg (JPS)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-outline"></span>
+<span class="font-label-sm text-[11px] text-on-surface">Bomba JBPM (2)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary-fixed-dim"></span>
+<span class="font-label-sm text-[11px] text-on-surface">Kru &amp; Trak En Route</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-sm bg-primary text-on-primary font-bold px-1 text-[9px]">PPS</span>
+<span class="font-label-sm text-[11px] text-on-surface">Pusat Pemindahan (6)</span>
+</div>
+</div>
+<!-- Telemetry Sync Pill with Manual Refresh Button -->
+<div class="bg-surface-container-lowest rounded-xl px-3.5 py-2 shadow-floating flex items-center gap-2.5 text-caption font-data-mono-sm text-secondary">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="hidden sm:inline">GovNet IoT Live: 101.6318° E</span>
+<span>· Kemas kini: 2 min lepas</span>
+<button class="p-1 hover:text-primary rounded hover:bg-surface-container transition-colors" onclick="this.classList.add('animate-spin'); setTimeout(() =&gt; this.classList.remove('animate-spin'), 600);" title="Segarkan Suapan Data GIS">
+<span class="material-symbols-outlined text-body-sm">sync</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple GIS zoom interactive simulation
+  let currentZoom = 1;
+  const mapSvg = document.getElementById('map-viewport')?.querySelector('svg');
+
+  function zoomInMap() {
+    if (!mapSvg) return;
+    currentZoom = Math.min(currentZoom + 0.15, 2.2);
+    mapSvg.style.transform = `scale(${currentZoom})`;
+    mapSvg.style.transformOrigin = 'center center';
+    mapSvg.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1)';
+  }
+
+  function zoomOutMap() {
+    if (!mapSvg) return;
+    currentZoom = Math.max(currentZoom - 0.15, 0.85);
+    mapSvg.style.transform = `scale(${currentZoom})`;
+    mapSvg.style.transformOrigin = 'center center';
+    mapSvg.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1)';
+  }
+
+  // Toggle active inspector
+  document.getElementById('primary-selected-marker')?.addEventListener('click', () => {
+    const card = document.getElementById('marker-inspector-card');
+    if (card) {
+      card.classList.remove('hidden');
+    }
+  });
+</script></main>
+<!-- ============================================== -->
+<!-- 3. COLLAPSIBLE RIGHT PANEL: LIVE AGENT TRACE   -->
+<!-- ============================================== -->
+<aside class="w-80 bg-surface border-l border-line flex flex-col shrink-0 h-full transition-all duration-200" id="agent-trace-panel">
+<!-- Panel Header -->
+<div class="h-10 border-b border-line px-3 flex items-center justify-between shrink-0 bg-white">
+<div class="flex items-center gap-2">
+<i class="w-3.5 h-3.5 text-ink" data-lucide="cpu"></i>
+<span class="text-xs font-display font-semibold tracking-tight text-ink">Live Agent Trace</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono text-status-success bg-green-50 border border-green-200">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success status-pulse"></span>
+            LIVE
+          </span>
+<button class="p-1 text-muted hover:text-ink rounded" onclick="toggleRightPanel()">
+<i class="w-3.5 h-3.5" data-lucide="x"></i>
+</button>
+</div>
+</div>
+<!-- Layer Filters & Follow live toggle -->
+<div class="p-2.5 border-b border-line bg-surface space-y-2 shrink-0">
+<div class="flex items-center justify-between text-[11px]">
+<span class="text-muted font-mono uppercase text-[10px]">Tapis Lapisan / Layer</span>
+<label class="flex items-center gap-1.5 cursor-pointer text-muted font-mono text-[10px]">
+<input checked="" class="rounded border-line text-ink focus:ring-0" type="checkbox"/>
+<span>Ikut Langsung (Auto-scroll)</span>
+</label>
+</div>
+<div class="flex flex-wrap gap-1 text-[10px] font-mono">
+<button class="px-1.5 py-0.5 rounded bg-ink text-white font-medium">Semua (5)</button>
+<button class="px-1.5 py-0.5 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white">Router</button>
+<button class="px-1.5 py-0.5 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white">Case Mgr</button>
+<button class="px-1.5 py-0.5 rounded bg-surface-2 border border-line text-ink-2 hover:bg-white">Dept</button>
+</div>
+</div>
+<!-- Chronological trace rows -->
+<div class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs font-sans">
+<!-- Step 1: Router -->
+<div class="p-2 rounded border border-line bg-white space-y-1">
+<div class="flex items-center justify-between text-[10px] font-mono text-muted">
+<span class="text-ink font-medium">10:42:01.120</span>
+<span class="px-1 py-0.2 bg-zinc-100 rounded text-ink-2 border border-line">Router</span>
+</div>
+<div class="text-xs text-ink font-medium">Pengesanan Niat &amp; Pengkelasan Agensi</div>
+<div class="text-[11px] text-muted">Mengenalpasti MBPJ Seksyen 14 sebagai agensi utama (Keyakinan 98.4%).</div>
+<div class="flex items-center justify-between pt-1 border-t border-line text-[10px] font-mono text-muted">
+<span>deepseek-flash</span>
+<span>low · 312 tok</span>
+</div>
+</div>
+<!-- Step 2: Policy citations -->
+<div class="p-2 rounded border border-line bg-white space-y-1">
+<div class="flex items-center justify-between text-[10px] font-mono text-muted">
+<span class="text-ink font-medium">10:42:01.880</span>
+<span class="px-1 py-0.2 bg-zinc-100 rounded text-ink-2 border border-line">Policy Engine</span>
+</div>
+<div class="text-xs text-ink font-medium">Semakan Akta Jalan, Parit &amp; Bangunan 1974</div>
+<div class="text-[11px] text-muted">Seksyen 50(1): Tanggungjawab pihak berkuasa tempatan bagi penyenggaraan parit utama.</div>
+<div class="flex items-center justify-between pt-1 border-t border-line text-[10px] font-mono text-muted">
+<span>deepseek-flash</span>
+<span>med · 540 tok</span>
+</div>
+</div>
+<!-- Step 3: Dispatcher running -->
+<div class="p-2 rounded border border-line bg-surface-2 space-y-1">
+<div class="flex items-center justify-between text-[10px] font-mono text-muted">
+<span class="text-ink font-medium">10:42:02.340</span>
+<span class="px-1 py-0.2 bg-amber-100 text-status-warning rounded border border-amber-200">Dispatcher</span>
+</div>
+<div class="text-xs text-ink font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-status-warning status-pulse"></span>
+            Menjana Tiket Aduan MT-26-000123
+          </div>
+<div class="text-[11px] text-muted">Mengesahkan zon aduan Zon 7 Petaling Jaya. Menunggu pengesahan kontraktor.</div>
+<div class="flex items-center justify-between pt-1 border-t border-line text-[10px] font-mono text-muted">
+<span>deepseek-chat</span>
+<span>running...</span>
+</div>
+</div>
+</div>
+<!-- Trace Footer: Hash status -->
+<div class="p-2 border-t border-line bg-white flex items-center justify-between text-[10px] font-mono text-muted shrink-0">
+<span class="flex items-center gap-1 text-status-success">
+<i class="w-3 h-3 text-status-success" data-lucide="shield"></i>
+<span>Rantaian SHA-256 Sah</span>
+</span>
+<button class="hover:text-ink underline">Salin JSON</button>
+</div>
+</aside>
+</div>
+<!-- ============================================== -->
+<!-- 4. MODALS & OVERLAYS                           -->
+<!-- ============================================== -->
+<!-- DEPARTMENTS COMMAND PALETTE (Popover / Dialog) -->
+<div class="hidden fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-start justify-center pt-20 px-4" id="dept-command-palette" onclick="closePaletteOnBackdrop(event)">
+<div class="w-full max-w-xl bg-white rounded-xl border border-line shadow-floating-lg overflow-hidden flex flex-col max-h-[819px] animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+<!-- Palette Search Header -->
+<div class="p-3 border-b border-line flex items-center gap-2.5 bg-surface">
+<i class="w-4 h-4 text-ink" data-lucide="building-2"></i>
+<input class="w-full text-xs font-sans text-ink placeholder:text-muted bg-transparent focus:outline-none" id="palette-search-input" onkeyup="filterDeptServices()" placeholder="Cari 10 jabatan atau perkhidmatan spesifik (cth: JPJ, Cukai, Parit)..." type="text"/>
+<kbd class="px-1.5 py-0.5 bg-white border border-line rounded text-[10px] font-mono text-muted shadow-sm">ESC</kbd>
+</div>
+<!-- 10 Malaysian Departments List with Official Color Dots & Active Cases -->
+<div class="flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-line/60" id="palette-departments-list">
+<!-- 1. Local Government (MBPJ / PBT) -->
+<div class="pt-1 first:pt-0 dept-item" data-name="Kerajaan Tempatan PBT MBPJ DBKL Parit Sampah Cukai Pintu">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kerajaan Tempatan (PBT)', '#0F766E')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-localgov shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kerajaan Tempatan &amp; PBT</span>
+<span class="text-[10px] font-mono text-muted">(MBPJ, DBKL, MBSA)</span>
+</div>
+<div class="text-[11px] text-muted">Aduan parit, jalan berlubang, sisa domestik, lesen perniagaan</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">1,240 kes</span>
+<div class="text-[10px] text-status-success font-mono">Disasarkan</div>
+</div>
+</button>
+</div>
+<!-- 2. Road Transport (JPJ) -->
+<div class="pt-1 dept-item" data-name="JPJ Jabatan Pengangkutan Jalan Lesen Memandu Cukai Jalan Roadtax Kenderaan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Pengangkutan Jalan (JPJ)', '#EA580C')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-jpj shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Jabatan Pengangkutan Jalan (JPJ)</span>
+</div>
+<div class="text-[11px] text-muted">Pembaharuan lesen memandu, cukai jalan digital, pertukaran hak milik</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">854 kes</span>
+<div class="text-[10px] text-muted font-mono">Pantas</div>
+</div>
+</button>
+</div>
+<!-- 3. Health (KKM) -->
+<div class="pt-1 dept-item" data-name="Kesihatan KKM Klinik Hospital Temujanji Ubat Rawatan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kesihatan (KKM)', '#DC2626')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-health shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kementerian Kesihatan (KKM)</span>
+</div>
+<div class="text-[11px] text-muted">Temujanji klinik kesihatan, rekod imunisasi, bekalan ubat pos</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">620 kes</span>
+</div>
+</button>
+</div>
+<!-- 4. Inland Revenue (LHDN) -->
+<div class="pt-1 dept-item" data-name="LHDN Lembaga Hasil Dalam Negeri Cukai Pendapatan e-Filing Rebat">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Lembaga Hasil (LHDN)', '#CA8A04')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-lhdn shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Lembaga Hasil Dalam Negeri (LHDN)</span>
+</div>
+<div class="text-[11px] text-muted">Penyerahan e-Filing, rebat pelepasan cukai, bayaran ansuran</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">415 kes</span>
+</div>
+</button>
+</div>
+<!-- 5. Police / Home Affairs (PDRM / KDN) -->
+<div class="pt-1 dept-item" data-name="Polis PDRM KDN Keselamatan Saman Trafik Laporan Polis">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Polis Diraja Malaysia (PDRM)', '#1E3A8A')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-police shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Polis &amp; Keselamatan (PDRM / KDN)</span>
+</div>
+<div class="text-[11px] text-muted">Semakan saman trafik, aduan jenayah siber, laporan komuniti</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">310 kes</span>
+</div>
+</button>
+</div>
+<!-- 6. Immigration (JIM) -->
+<div class="pt-1 dept-item" data-name="Imigresen JIM Pasport Visa Pas Lawatan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Jabatan Imigresen (JIM)', '#7C3AED')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-immigration shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Jabatan Imigresen Malaysia (JIM)</span>
+</div>
+<div class="text-[11px] text-muted">Permohonan &amp; pembaharuan pasport Malaysia, visa perjalanan</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">295 kes</span>
+</div>
+</button>
+</div>
+<!-- 7. Social Welfare (JKM) -->
+<div class="pt-1 dept-item" data-name="Kebajikan JKM Bantuan Kanak-kanak Warga Emas OKU">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kebajikan Masyarakat (JKM)', '#DB2777')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-jkm shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kebajikan Masyarakat (JKM)</span>
+</div>
+<div class="text-[11px] text-muted">Bantuan kewangan bulanan, pendaftaran kad OKU, bantuan bencana</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">188 kes</span>
+</div>
+</button>
+</div>
+<!-- 8. Education (KPM) -->
+<div class="pt-1 dept-item" data-name="Pendidikan KPM Sekolah Biasiswa Peperiksaan">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Kementerian Pendidikan (KPM)', '#2563EB')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-education shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Kementerian Pendidikan (KPM)</span>
+</div>
+<div class="text-[11px] text-muted">Pertukaran sekolah anak, semakan peperiksaan awam, permohonan asrama</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">142 kes</span>
+</div>
+</button>
+</div>
+<!-- 9. Agriculture & Environment (KPKM / NRECC) -->
+<div class="pt-1 dept-item" data-name="Pertanian Alam Sekitar Sungai Banjir Saliran Alam">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Pertanian &amp; Alam Sekitar', '#16A34A')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-agri shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Pertanian &amp; Alam Sekitar (JPS / JAS)</span>
+</div>
+<div class="text-[11px] text-muted">Pemantauan aras air sungai, aduan pencemaran udara/sungai, bantuan subsidi baja</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">96 kes</span>
+</div>
+</button>
+</div>
+<!-- 10. Cross-Agency (Rentang Agensi) -->
+<div class="pt-1 dept-item" data-name="Rentang Agensi Cross-Agency Pelbagai Bantuan Banjir Bersepadu">
+<button class="w-full flex items-center justify-between p-2 rounded-lg hover:bg-surface-2 transition-colors text-left group" onclick="selectDepartment('Rentang Agensi (Bersepadu)', '#475569')">
+<div class="flex items-center gap-2.5">
+<span class="w-3 h-3 rounded-full bg-dept-cross shrink-0"></span>
+<div>
+<div class="font-medium text-xs text-ink flex items-center gap-1.5">
+<span>Rentang Agensi (Pusat Kawalan)</span>
+</div>
+<div class="text-[11px] text-muted">Pengurusan bencana bersepadu, pemindahan mangsa, bantuan serentak</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] font-mono text-ink font-medium">54 kes</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Palette Footer -->
+<div class="p-2.5 bg-surface border-t border-line text-[11px] font-mono text-muted flex items-center justify-between">
+<span>Pilih jabatan untuk menyematkannya sebagai sasaran permohonan seterusnya.</span>
+<span>10 Agensi Berdaftar</span>
+</div>
+</div>
+</div>
+<!-- SCRIPT FOR DRAG-RESIZING, DOUBLE-CLICK RESET, COLLAPSE RAIL, BILINGUAL DICTIONARY -->
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // 1. SIDEBAR RESIZING LOGIC
+    const sidebar = document.getElementById('app-sidebar');
+    const dragHandle = document.getElementById('sidebar-drag-handle');
+    const scrollableContent = document.getElementById('sidebar-scrollable-content');
+    const topSection = document.getElementById('sidebar-top-section');
+    const footerSection = document.getElementById('sidebar-footer');
+    const railCompact = document.getElementById('rail-compact-content');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+
+    let isResizing = false;
+    let isCollapsed = false;
+    const DEFAULT_WIDTH = 272;
+    const MIN_WIDTH = 220;
+    const MAX_WIDTH = 420;
+    const RAIL_WIDTH = 64;
+
+    // Load persisted width
+    let currentWidth = parseInt(localStorage.getItem('mytadbir_sidebar_width') || DEFAULT_WIDTH);
+    sidebar.style.width = currentWidth + 'px';
+
+    dragHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      document.body.classList.add('sidebar-resizing');
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    function onMouseMove(e) {
+      if (!isResizing) return;
+      let newWidth = e.clientX;
+      if (newWidth < MIN_WIDTH) newWidth = MIN_WIDTH;
+      if (newWidth > MAX_WIDTH) newWidth = MAX_WIDTH;
+      sidebar.style.width = newWidth + 'px';
+      currentWidth = newWidth;
+    }
+
+    function onMouseUp() {
+      if (isResizing) {
+        isResizing = false;
+        document.body.classList.remove('sidebar-resizing');
+        localStorage.setItem('mytadbir_sidebar_width', currentWidth);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+    }
+
+    // Double-click handle to reset to 272px
+    dragHandle.addEventListener('dblclick', () => {
+      sidebar.style.width = DEFAULT_WIDTH + 'px';
+      currentWidth = DEFAULT_WIDTH;
+      localStorage.setItem('mytadbir_sidebar_width', DEFAULT_WIDTH);
+      if (isCollapsed) uncollapseSidebar();
+    });
+
+    // Toggle Collapse to 64px Icon Rail
+    toggleSidebarBtn.addEventListener('click', () => {
+      if (isCollapsed) {
+        uncollapseSidebar();
+      } else {
+        collapseSidebar();
+      }
+    });
+
+    function collapseSidebar() {
+      isCollapsed = true;
+      sidebar.style.width = RAIL_WIDTH + 'px';
+      topSection.classList.add('hidden');
+      scrollableContent.classList.add('hidden');
+      footerSection.classList.add('hidden');
+      railCompact.classList.remove('hidden');
+      railCompact.classList.add('flex');
+    }
+
+    function uncollapseSidebar() {
+      isCollapsed = false;
+      sidebar.style.width = currentWidth + 'px';
+      topSection.classList.remove('hidden');
+      scrollableContent.classList.remove('hidden');
+      footerSection.classList.remove('hidden');
+      railCompact.classList.add('hidden');
+      railCompact.classList.remove('flex');
+    }
+
+    // 2. COLLAPSIBLE GROUPS WITH CHEVRON ROTATION
+    function toggleGroup(groupId, chevronId) {
+      const group = document.getElementById(groupId);
+      const chevron = document.getElementById(chevronId);
+      if (group.classList.contains('hidden')) {
+        group.classList.remove('hidden');
+        chevron.classList.remove('rotate-180-custom');
+      } else {
+        group.classList.add('hidden');
+        chevron.classList.add('rotate-180-custom');
+      }
+    }
+
+    // 3. RIGHT PANEL (LIVE AGENT TRACE) TOGGLE
+    const tracePanel = document.getElementById('agent-trace-panel');
+    let rightPanelOpen = true;
+    function toggleRightPanel() {
+      rightPanelOpen = !rightPanelOpen;
+      if (rightPanelOpen) {
+        tracePanel.classList.remove('hidden');
+      } else {
+        tracePanel.classList.add('hidden');
+      }
+    }
+
+    // 4. USER PROFILE POPOVER
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    const userPopover = document.getElementById('user-popover-menu');
+    function toggleUserMenu(event) {
+      event.stopPropagation();
+      userPopover.classList.toggle('hidden');
+    }
+    document.addEventListener('click', (e) => {
+      if (!userPopover.contains(e.target) && !userMenuBtn.contains(e.target)) {
+        userPopover.classList.add('hidden');
+      }
+    });
+
+    // 5. DEPARTMENTS COMMAND PALETTE
+    const deptPalette = document.getElementById('dept-command-palette');
+    function toggleDeptPalette(e) {
+      if (e) e.stopPropagation();
+      deptPalette.classList.toggle('hidden');
+      if (!deptPalette.classList.contains('hidden')) {
+        setTimeout(() => document.getElementById('palette-search-input').focus(), 50);
+      }
+    }
+    function closePaletteOnBackdrop(e) {
+      deptPalette.classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !deptPalette.classList.contains('hidden')) {
+        deptPalette.classList.add('hidden');
+      }
+      // Ctrl+K for search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        toggleDeptPalette();
+      }
+      // Ctrl+N for new request
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        alert('Permintaan Baharu dimulakan');
+      }
+    });
+
+    function selectDepartment(deptName, color) {
+      deptPalette.classList.add('hidden');
+      alert(`Jabatan "${deptName}" telah disematkan untuk permohonan ini.`);
+    }
+
+    function filterDeptServices() {
+      const q = document.getElementById('palette-search-input').value.toLowerCase();
+      const items = document.querySelectorAll('.dept-item');
+      items.forEach(item => {
+        const text = item.getAttribute('data-name').toLowerCase();
+        if (text.includes(q)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    // 6. ROLE SWITCH: CITIZEN VS OFFICER
+    function setRole(role) {
+      const citizenBtn = document.getElementById('role-citizen-btn');
+      const officerBtn = document.getElementById('role-officer-btn');
+      const approvalNav = document.getElementById('nav-approval-queue');
+      const auditNav = document.getElementById('nav-audit-trail');
+      const officerBadge = document.getElementById('badge-officer-only');
+
+      if (role === 'citizen') {
+        citizenBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        officerBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+        approvalNav.classList.add('hidden');
+        auditNav.classList.add('hidden');
+        officerBadge.classList.add('hidden');
+      } else {
+        officerBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        citizenBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+        approvalNav.classList.remove('hidden');
+        auditNav.classList.remove('hidden');
+        officerBadge.classList.remove('hidden');
+      }
+    }
+
+    // 7. BILINGUAL DICTIONARY (BM / EN)
+    const i18n = {
+      BM: {
+        newRequest: "Permintaan Baharu",
+        searchPlaceholder: "Cari kes & perbualan...",
+        commands: "Arahan & Templat",
+        departments: "Jabatan Kerajaan",
+        templates: "Templat Pantas",
+        trackCase: "Jejak Kes Mengikut ID",
+        activity: "Aktiviti Saya",
+        myCases: "Kes Saya",
+        payments: "Bayaran",
+        documents: "Dokumen",
+        calendar: "Kalendar",
+        notifications: "Pemberitahuan",
+        liveViews: "Paparan Langsung",
+        serviceMap: "Peta Perkhidmatan",
+        impactDashboard: "Papan Pemuka Impak",
+        governance: "Tadbir Urus",
+        approvalQueue: "Giliran Kelulusan",
+        policyLibrary: "Pusat Dasar & Akta",
+        auditTrail: "Jejak Audit Berantai",
+        conversations: "Perbualan",
+        pinned: "Dipin",
+        today: "Hari Ini",
+        yesterday: "Semalam",
+        prev7days: "7 Hari Lepas",
+        workspaceGreeting: "Selamat datang, Ahmad Harith.",
+        workspaceSubtext: "Satu permohonan untuk semua agensi kerajaan. Nyatakan keperluan anda dalam Bahasa Malaysia atau English.",
+        suggestedTitle: "Cadangan Permintaan Pantas (Berdasarkan Lokasi & Rekod)",
+        sendBtn: "Hantar",
+        caseStatus: "Dalam Proses",
+        headerTitle: "Permintaan Baharu"
+      },
+      EN: {
+        newRequest: "New Request",
+        searchPlaceholder: "Search cases & chats...",
+        commands: "Commands & Templates",
+        departments: "Departments",
+        templates: "Quick Templates",
+        trackCase: "Track a Case by ID",
+        activity: "My Activity",
+        myCases: "My Cases",
+        payments: "Payments",
+        documents: "Documents",
+        calendar: "Calendar",
+        notifications: "Notifications",
+        liveViews: "Live Views",
+        serviceMap: "Service Map",
+        impactDashboard: "Impact Dashboard",
+        governance: "Governance",
+        approvalQueue: "Approval Queue",
+        policyLibrary: "Policy Library",
+        auditTrail: "Audit Trail",
+        conversations: "Conversations",
+        pinned: "Pinned",
+        today: "Today",
+        yesterday: "Yesterday",
+        prev7days: "Previous 7 Days",
+        workspaceGreeting: "Welcome back, Ahmad Harith.",
+        workspaceSubtext: "One request routed to the right Malaysian department and carried out smoothly.",
+        suggestedTitle: "Suggested Request Chips (Location & Profile Based)",
+        sendBtn: "Send",
+        caseStatus: "In Progress",
+        headerTitle: "New Request"
+      }
+    };
+
+    function setLang(lang) {
+      const bmBtn = document.getElementById('lang-bm');
+      const enBtn = document.getElementById('lang-en');
+      if (lang === 'BM') {
+        bmBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        enBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+      } else {
+        enBtn.className = "px-2 py-0.5 rounded font-medium bg-white text-ink shadow-sm transition-all";
+        bmBtn.className = "px-2 py-0.5 rounded font-medium text-muted hover:text-ink transition-all";
+      }
+
+      const dict = i18n[lang];
+      document.getElementById('txt-new-request').textContent = dict.newRequest;
+      document.getElementById('sidebar-search-input').placeholder = dict.searchPlaceholder;
+      document.getElementById('lbl-commands').textContent = dict.commands;
+      document.getElementById('txt-departments-nav').textContent = dict.departments;
+      document.getElementById('txt-templates').textContent = dict.templates;
+      document.getElementById('txt-track-case').textContent = dict.trackCase;
+      document.getElementById('lbl-activity').textContent = dict.activity;
+      document.getElementById('txt-my-cases').textContent = dict.myCases;
+      document.getElementById('txt-payments').textContent = dict.payments;
+      document.getElementById('txt-documents').textContent = dict.documents;
+      document.getElementById('txt-calendar').textContent = dict.calendar;
+      document.getElementById('txt-notifications').textContent = dict.notifications;
+      document.getElementById('lbl-live-views').textContent = dict.liveViews;
+      document.getElementById('txt-service-map').textContent = dict.serviceMap;
+      document.getElementById('txt-impact-dashboard').textContent = dict.impactDashboard;
+      document.getElementById('lbl-governance').textContent = dict.governance;
+      document.getElementById('txt-approval-queue').textContent = dict.approvalQueue;
+      document.getElementById('txt-policy-library').textContent = dict.policyLibrary;
+      document.getElementById('txt-audit-trail').textContent = dict.auditTrail;
+      document.getElementById('lbl-conversations').textContent = dict.conversations;
+      document.getElementById('lbl-pinned').textContent = dict.pinned;
+      document.getElementById('lbl-today').textContent = dict.today;
+      document.getElementById('lbl-yesterday').textContent = dict.yesterday;
+      document.getElementById('lbl-prev7days').textContent = dict.prev7days;
+      document.getElementById('txt-workspace-greeting').textContent = dict.workspaceGreeting;
+      document.getElementById('txt-workspace-subtext').textContent = dict.workspaceSubtext;
+      document.getElementById('lbl-suggested-requests').textContent = dict.suggestedTitle;
+      document.getElementById('txt-send-btn').textContent = dict.sendBtn;
+      document.getElementById('case-status-text').textContent = dict.caseStatus;
+      document.getElementById('header-page-title').textContent = dict.headerTitle;
+    }
+  </script>
+</body></html>

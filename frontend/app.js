@@ -12,6 +12,7 @@ async function api(path, { method = "GET", body, form } = {}) {
   const headers = TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {};
   if (body) headers["Content-Type"] = "application/json";
   const r = await fetch(path, { method, headers, body: form || (body ? JSON.stringify(body) : undefined) });
+  if (r.status === 401 && TOKEN && !path.startsWith("/api/auth")) { TOKEN = null; store.set("mt-token", null); location.reload(); }
   if (!r.ok) { let d = r.statusText; try { d = (await r.json()).detail || d; } catch {} if (d && typeof d === "object") d = (store.get("mt-lang", "en") === "bm" ? d.bm : d.en) || JSON.stringify(d); throw new Error(d); }
   return r.json();
 }
@@ -67,17 +68,20 @@ const modelOf = (ev) => { const m = ev.data?.llm; return m && m.model ? `${m.mod
 // ---------------------------------------------------------------- login
 function Login({ t, lang, setLang, onIn }) {
   const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const [show, setShow] = useState(false); const [remember, setRemember] = useState(true);
   const go = async (fn) => { setBusy(true); setErr(""); try { onIn(await fn()); } catch (e) { setErr(e.message); } setBusy(false); };
   return html`<div class="login">
     <div class="login-top"><div class="seg"><button class=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>EN</button><button class=${lang === "bm" ? "on" : ""} onClick=${() => setLang("bm")}>BM</button></div></div>
     <main class="login-card">
       <div class="login-brand"><div class="brand-mark">M</div><b>MyTadbir</b></div>
       <p class="muted login-sub">${lang === "bm" ? "Satu pintu untuk semua perkhidmatan kerajaan" : "One front door to government services"}</p>
-      <button class="btn primary login-btn" disabled=${busy} onClick=${() => go(() => api("/api/auth/mydigitalid", { method: "POST" }))}>${t.mydid}</button>
+      <button class="btn primary login-btn" disabled=${busy} onClick=${() => go(() => api("/api/auth/mydigitalid", { method: "POST" }))}>${I("ShieldCheck")} ${t.mydid}</button>
       <div class="or">${lang === "bm" ? "atau" : "or"}</div>
       <form onSubmit=${(e) => { e.preventDefault(); go(() => api("/api/auth/login", { method: "POST", body: { username: u, password: p } })); }}>
-        <div class="field"><label for="u">${t.username}</label><input id="u" value=${u} onInput=${(e) => setU(e.target.value)} autocomplete="username" /></div>
-        <div class="field"><label for="p">${t.password}</label><input id="p" type="password" value=${p} onInput=${(e) => setP(e.target.value)} autocomplete="current-password" /></div>
+        <div class="field"><label for="u">${lang === "bm" ? "Nombor MyKad atau nama pengguna" : "MyKad number or username"}</label><input id="u" value=${u} onInput=${(e) => setU(e.target.value)} autocomplete="username" /></div>
+        <div class="field"><label for="p">${t.password}</label><div class="pw"><input id="p" type=${show ? "text" : "password"} value=${p} onInput=${(e) => setP(e.target.value)} autocomplete="current-password" />
+          <button type="button" class="icon-btn" aria-label=${show ? "Hide password" : "Show password"} onClick=${() => setShow(!show)}>${I(show ? "EyeOff" : "Eye")}</button></div></div>
+        <div class="login-row"><label><input type="checkbox" checked=${remember} onChange=${() => setRemember(!remember)} /> ${lang === "bm" ? "Ingat peranti ini" : "Remember this device"}</label><a href="#" onClick=${(e) => e.preventDefault()}>${lang === "bm" ? "Lupa kata laluan?" : "Forgot password?"}</a></div>
         ${err && html`<div class="err">${err}</div>`}
         <button class="btn login-btn" style=${{ marginTop: 16 }} disabled=${busy}>${t.login}</button>
       </form>
@@ -399,27 +403,86 @@ function InboxView({ t, lang, openThread }) {
       ${ns.map((n) => html`<div style=${{ padding: "6px 0", borderTop: "1px dashed var(--line)" }}><span class="mono muted">${fmtDate(n.created_at)}</span> · ${lang === "bm" ? n.bm : n.en}</div>`)}</div>`)}</div>`;
 }
 
-function MapView({ lang }) {
-  const ref = useRef(null); const mapRef = useRef(null); const layer = useRef(null);
-  const [pts] = useLoad("/api/map");
+const FLOOD_COL = { NORMAL: "#15803d", ALERT: "#ca8a04", WARNING: "#ea580c", DANGER: "#b91c1c" };
+function MapView({ lang, openThread, theme }) {
+  const B = lang === "bm";
+  const ref = useRef(null); const mapRef = useRef(null); const layers = useRef({}); const tiles = useRef(null);
+  const [pts] = useLoad("/api/map"); const [flood, setFlood] = useState(null); const [warn, setWarn] = useState(null);
+  const [state, setState] = useState("SELANGOR"); const [sel, setSel] = useState(null);
+  const [on, setOn] = useState(store.get("mt-maplayers", { incident: true, contractor: true, flood_watch: true, stations: true, school: true }));
+  const [lvl, setLvl] = useState({ NORMAL: true, ALERT: true, WARNING: true, DANGER: true });
+  const [radius, setRadius] = useState(0); const home = [3.1073, 101.6067];
+  const toggle = (k) => { const n = { ...on, [k]: !on[k] }; setOn(n); store.set("mt-maplayers", n); };
+  useEffect(() => { setFlood(null); api(`/api/map/flood?state=${state}`).then(setFlood).catch(() => setFlood({ stations: [], stale: true })); }, [state]);
+  useEffect(() => { api("/api/map/warnings").then(setWarn).catch(() => {}); }, []);
   useEffect(() => {
     if (!mapRef.current) {
-      mapRef.current = L.map(ref.current).setView([3.1073, 101.6067], 14);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(mapRef.current);
-      layer.current = L.layerGroup().addTo(mapRef.current);
+      mapRef.current = L.map(ref.current, { zoomControl: false }).setView(home, 13);
+      L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
+      ["cases", "stations", "radius"].forEach((k) => { layers.current[k] = L.layerGroup().addTo(mapRef.current); });
     }
-  }, []);
+    if (tiles.current) tiles.current.remove();
+    tiles.current = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${theme === "dark" ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`,
+      { maxZoom: 19, attribution: "© OpenStreetMap · © CARTO" }).addTo(mapRef.current);
+  }, [theme]);
+  const near = (p) => !radius || mapRef.current.distance(home, [p.lat, p.lng]) <= radius;
   useEffect(() => {
-    if (!layer.current || !pts) return;
-    layer.current.clearLayers();
-    const color = { incident: "#c0392b", contractor: "#c98208", school: "#2b4fb8", flood_watch: "#0b6e8a" };
-    pts.forEach((p) => {
-      if (p.kind === "flood_watch") L.circle([p.lat, p.lng], { radius: p.meta?.radius_m || 400, color: color.flood_watch, fillOpacity: 0.12 }).addTo(layer.current).bindTooltip(p.label);
-      else L.circleMarker([p.lat, p.lng], { radius: 9, color: "#fff", weight: 2, fillColor: color[p.kind] || "#555", fillOpacity: 1 }).addTo(layer.current).bindTooltip(p.label + (p.meta?.eta_minutes ? ` · ETA ${p.meta.eta_minutes} min` : ""));
-      if (p.kind === "contractor" && p.meta?.to) L.polyline([[p.lat, p.lng], p.meta.to], { color: color.contractor, dashArray: "6 6" }).addTo(layer.current);
+    const g = layers.current.cases; if (!g || !pts) return; g.clearLayers();
+    const col = { incident: "#b91c1c", contractor: "#09090b", school: "#2563eb", flood_watch: "#0f766e" };
+    pts.filter((p) => on[p.kind] && near(p)).forEach((p) => {
+      let m;
+      if (p.kind === "flood_watch") m = L.circle([p.lat, p.lng], { radius: p.meta?.radius_m || 400, color: col.flood_watch, weight: 1.5, fillOpacity: 0.1, dashArray: "4 4" });
+      else m = L.circleMarker([p.lat, p.lng], { radius: p.kind === "incident" ? 9 : 7, color: "#fff", weight: 2, fillColor: col[p.kind] || "#555", fillOpacity: 1 });
+      m.addTo(g).bindTooltip(p.label).on("click", () => setSel({ type: "case", ...p }));
+      if (p.kind === "contractor" && p.meta?.to) L.polyline([[p.lat, p.lng], p.meta.to], { color: "#09090b", weight: 2, dashArray: "6 6" }).addTo(g);
     });
-  }, [pts]);
-  return html`<div><div class="toolbar"><span class="pill bad">● ${lang === "bm" ? "Insiden" : "Incident"}</span><span class="pill agent">● ${lang === "bm" ? "Kontraktor" : "Contractor"}</span><span class="pill accent">◯ ${lang === "bm" ? "Pemantauan banjir" : "Flood watch"}</span><span class="pill">● ${lang === "bm" ? "Sekolah" : "School"}</span></div><div id="map" ref=${ref}></div></div>`;
+  }, [pts, on, radius]);
+  useEffect(() => {
+    const g = layers.current.stations; if (!g) return; g.clearLayers();
+    if (!on.stations || !flood) return;
+    flood.stations.filter((s) => lvl[s.indicator] !== false && near(s)).forEach((s) => {
+      L.circleMarker([s.lat, s.lng], { radius: 5, color: FLOOD_COL[s.indicator] || "#71717a", weight: 2, fillColor: "#fff", fillOpacity: 1 })
+        .addTo(g).bindTooltip(`${s.name} · ${s.indicator}`).on("click", () => setSel({ type: "station", ...s }));
+    });
+  }, [flood, on, lvl, radius]);
+  useEffect(() => {
+    const g = layers.current.radius; if (!g) return; g.clearLayers();
+    if (radius) L.circle(home, { radius, color: "#09090b", weight: 1, fillOpacity: 0.03 }).addTo(g);
+  }, [radius]);
+  const cnt = (k) => (pts || []).filter((p) => p.kind === k && near(p)).length;
+  const fcnt = (i) => (flood?.stations || []).filter((s) => s.indicator === i && near(s)).length;
+  const lastStation = flood?.stations?.map((s) => s.updated).filter(Boolean).sort().pop();
+  const Row = (k, color, label, n, ring) => html`<label class="lrow"><input type="checkbox" checked=${!!on[k]} onChange=${() => toggle(k)} />
+    <span class="ddot" style=${ring ? { border: "2px solid " + color, background: "transparent" } : { background: color }}></span><span style=${{ flex: 1 }}>${label}</span><span class="mono muted">${n}</span></label>`;
+  return html`<div class="mapwrap">
+    <div id="map" ref=${ref}></div>
+    <div class="map-panel">
+      <div class="eyebrow">${B ? "Lapisan" : "Layers"}</div>
+      ${Row("incident", "#b91c1c", B ? "Kes dilaporkan" : "Reported cases", cnt("incident"))}
+      ${Row("contractor", "#09090b", B ? "Kru dalam perjalanan" : "Crews en route", cnt("contractor"))}
+      ${Row("flood_watch", "#0f766e", B ? "Kawasan pemantauan banjir" : "Flood-watch areas", cnt("flood_watch"), true)}
+      ${Row("stations", "#15803d", B ? "Stesen paras sungai (JPS)" : "River-level stations (JPS)", flood ? flood.stations.length : "…", true)}
+      ${on.stations && html`<div class="lsub">${Object.keys(FLOOD_COL).map((i) => html`<label key=${i}><input type="checkbox" checked=${lvl[i]} onChange=${() => setLvl({ ...lvl, [i]: !lvl[i] })} /><span class="ddot" style=${{ background: FLOOD_COL[i] }}></span>${i.toLowerCase()} <span class="mono muted">${fcnt(i)}</span></label>`)}
+        <select value=${state} onChange=${(e) => setState(e.target.value)}>${["SELANGOR", "WILAYAH PERSEKUTUAN KUALA LUMPUR", "JOHOR", "KELANTAN", "TERENGGANU", "PAHANG", "KEDAH", "PERAK", "PULAU PINANG", "SABAH", "SARAWAK"].map((x) => html`<option key=${x}>${x}</option>`)}</select></div>`}
+      ${Row("school", "#2563eb", B ? "Sekolah" : "Schools", cnt("school"))}
+      <div class="lrow muted" title=${B ? "Tiada suapan awam langsung untuk JBPM" : "No public live feed for JBPM"}><span class="ddot" style=${{ background: "#ea580c" }}></span><span style=${{ flex: 1 }}>${B ? "Kebakaran & penyelamat" : "Fire & rescue"}</span><span class="mono">${B ? "tiada suapan" : "no feed"}</span></div>
+      <div class="eyebrow" style=${{ marginTop: 10 }}>${B ? "Berdekatan saya" : "Near me"}: ${radius ? (radius / 1000).toFixed(1) + " km" : (B ? "semua" : "all")}</div>
+      <input type="range" min="0" max="20000" step="500" value=${radius} onInput=${(e) => setRadius(+e.target.value)} style=${{ width: "100%" }} />
+      <div class="muted" style=${{ fontSize: 11.5, marginTop: 8 }}>${flood ? html`${B ? "Stesen" : "Stations"}: ${flood.source}${lastStation ? html` · ${B ? "bacaan terakhir diterbitkan" : "last published reading"} <b>${lastStation.slice(0, 10)}</b>` : null}${flood.stale ? " · offline" : ""}` : (B ? "Memuat data JPS…" : "Loading JPS data…")}</div>
+    </div>
+    ${warn?.warnings?.length > 0 && html`<div class="map-warn">${I("TriangleAlert")}<span><b>${B ? warn.warnings[0].title_bm : warn.warnings[0].title_en}</b> · ${fmtDate(warn.warnings[0].valid_from)} – ${fmtDate(warn.warnings[0].valid_to)} <span class="muted">(MET Malaysia)</span></span></div>`}
+    ${sel && html`<div class="map-card">
+      <div style=${{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><b>${sel.type === "station" ? sel.name : sel.label}</b><button class="icon-btn" onClick=${() => setSel(null)}>${I("X")}</button></div>
+      ${sel.type === "station" ? html`<dl>
+        <dt>${B ? "Status" : "Status"}</dt><dd><span class="pill" style=${{ background: FLOOD_COL[sel.indicator] + "22", color: FLOOD_COL[sel.indicator], borderColor: "transparent" }}>${sel.indicator}</span></dd>
+        <dt>${B ? "Paras semasa" : "Current level"}</dt><dd class="mono">${sel.level ?? "-"} m</dd>
+        <dt>${B ? "Waspada / Amaran / Bahaya" : "Alert / Warning / Danger"}</dt><dd class="mono">${sel.alert} / ${sel.warning} / ${sel.danger} m</dd>
+        <dt>${B ? "Trend" : "Trend"}</dt><dd>${sel.trend || "-"}</dd><dt>${B ? "Daerah" : "District"}</dt><dd>${sel.district}</dd><dt>${B ? "Dikemas kini" : "Updated"}</dt><dd class="mono">${sel.updated || "-"}</dd></dl>`
+      : html`<dl><dt>${B ? "Jenis" : "Type"}</dt><dd>${sel.kind.replace("_", " ")}</dd>${sel.case_id ? html`<dt>${B ? "ID Kes" : "Case ID"}</dt><dd class="mono">${sel.case_id}</dd>` : null}
+        ${sel.meta?.severity ? html`<dt>${B ? "Keterukan" : "Severity"}</dt><dd>${sel.meta.severity}</dd>` : null}${sel.meta?.eta_minutes ? html`<dt>ETA</dt><dd class="mono">${sel.meta.eta_minutes} min</dd>` : null}</dl>
+        ${sel.case_id && html`<button class="btn primary" style=${{ width: "100%", justifyContent: "center" }} onClick=${async () => { const c = (await api("/api/cases")).find((x) => x.case_id === sel.case_id); if (c) openThread(c.thread_id); }}>${B ? "Buka kes" : "Open case"}</button>`}`}
+    </div>`}
+  </div>`;
 }
 
 function ImpactView({ lang }) {
@@ -665,7 +728,7 @@ function App() {
     case "documents": body = html`<${DocumentsView} t=${t} lang=${lang} />`; break;
     case "calendar": body = html`<${CalendarView} t=${t} lang=${lang} />`; break;
     case "inbox": store.set("mt-seen", Date.now()); body = html`<${InboxView} t=${t} lang=${lang} openThread=${openThread} />`; break;
-    case "map": body = html`<${MapView} lang=${lang} />`; break;
+    case "map": body = html`<${MapView} lang=${lang} theme=${theme} openThread=${openThread} />`; break;
     case "impact": body = html`<${ImpactView} lang=${lang} />`; break;
     case "actions": body = html`<${ActionsView} t=${t} lang=${lang} onDecide=${onDecide} />`; break;
     case "policy": body = html`<${PolicyView} t=${t} lang=${lang} user=${user} />`; break;

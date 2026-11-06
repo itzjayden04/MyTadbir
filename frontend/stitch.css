@@ -202,3 +202,23 @@ tr.click:hover td{background:var(--surface)}
 /* responsive grid (re-stated after the --side-w grid above so it wins) */
 @media (max-width:1280px){.shell,.shell.trace-off{grid-template-columns:var(--side-w) minmax(0,1fr)}}
 @media (max-width:900px){.shell,.shell.trace-off,.shell.rail{grid-template-columns:minmax(0,1fr)}.shell .side{width:min(300px,86vw)}}
+/* ---------- service map */
+.view:has(.mapwrap){padding:0;position:relative}
+.mapwrap{position:relative;height:calc(100vh - 57px)}
+.mapwrap #map{height:100%;min-height:0;border:0;border-radius:0}
+.map-panel{position:absolute;top:12px;left:12px;z-index:500;width:270px;max-height:calc(100% - 24px);overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:var(--float);padding:12px}
+.lrow{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13px;cursor:pointer}
+.lsub{padding:2px 0 6px 26px;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px}
+.lsub label{display:inline-flex;align-items:center;gap:4px;text-transform:capitalize}
+.lsub select{width:100%;margin-top:4px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--bg);font-size:12px}
+.map-warn{position:absolute;top:12px;left:296px;right:12px;z-index:500;display:flex;gap:8px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:8px 12px;font-size:13px;box-shadow:var(--float)}
+.map-card{position:absolute;top:70px;right:12px;z-index:500;width:300px;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:var(--float);padding:12px;animation:pop .2s var(--ease)}
+.map-card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12.5px;margin:10px 0}
+.map-card dt{color:var(--muted)}.map-card dd{margin:0;text-align:right}
+@media (max-width:900px){.map-panel{width:auto;right:12px;max-height:40%}.map-warn{top:auto;bottom:12px;left:12px}.map-card{left:12px;right:12px;width:auto;top:auto;bottom:12px}}
+.pw{position:relative}.pw input{width:100%;padding-right:40px}.pw .icon-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%)}
+.login-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:13px;color:var(--ink-2)}
+.login-row label{display:inline-flex;gap:6px;align-items:center}.login-row a{color:var(--ink);text-decoration:underline}
+.login .field input{border-color:var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
+.login .field input:focus{outline:none;border-color:var(--ink)}
+.login-btn{display:flex;gap:8px;justify-content:center}

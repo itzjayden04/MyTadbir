@@ -28,7 +28,7 @@ from .modules import always_on  # noqa: F401
 from .router import case_manager
 from .router.intent_router import route
 from .router.schemas import RoutingDecision
-from .services import audit, complexity, intake, memory_bag, rag, tagger
+from .services import audit, complexity, intake, livedata, memory_bag, rag, tagger
 
 ROOT = Path(__file__).resolve().parents[2]
 UPLOADS = Path(__file__).resolve().parents[1] / "data" / "uploads"
@@ -373,6 +373,18 @@ def map_points():
                for p in s.scalars(select(MapPoint).order_by(MapPoint.id))]
     schools = [{"kind": "school", "label": "Sekolah (demo)", "lat": 3.1081, "lng": 101.6079}]
     return pts + schools
+
+
+@app.get("/api/map/flood")
+async def map_flood(state: str | None = "SELANGOR"):
+    """Live JPS river-level stations (data.gov.my), cached 10 minutes."""
+    return await asyncio.to_thread(livedata.flood_stations, state or None)
+
+
+@app.get("/api/map/warnings")
+async def map_warnings():
+    """Live MET Malaysia weather warnings (data.gov.my), cached 10 minutes."""
+    return await asyncio.to_thread(livedata.weather_warnings)
 
 
 @app.get("/api/impact")
